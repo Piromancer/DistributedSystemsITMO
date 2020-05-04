@@ -1,8 +1,63 @@
 #include <stdio.h>
+#include <signal.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#include "io.h"
+#include "ipc.h"
+#include "pa1.h"
 
 int main(int argc, char* argv[]){
-    int i;
-    for (i = 0; i < argc; i++)
-        printf("argv[%d] = %s\n", i, argv[i]);
-    return 0;
+    pid_t pids[MAX_N+1];
+    int num_children = 4;
+    processes_count = 5;
+
+    for (size_t source = 0; source < processes_count; source++) {
+        for (size_t destination = 0; destination < processes_count; destination++) {
+            if (source != destination) {
+                int fd[2]; pipe(fd);
+                input[source][destination] = fd[0];
+                output[source][destination] = fd[1];
+            }
+        }
+    }
+
+
+    // create porcessess
+    pids[PARENT_ID] = getpid();
+    for (size_t id = 1; id <= num_children; id++) {
+        int child_pid = fork();
+        if (child_pid > 0) {
+            current = PARENT_ID;
+            pids[id] = child_pid;
+        } else if (child_pid == 0) {
+            // We are inside the child process.
+            current = id;
+            break;
+        }
+    }
+
+    if(current!=PARENT_ID){
+        Message msg = {
+            .s_header =
+                {
+                    .s_magic = MESSAGE_MAGIC,
+                    .s_type = STARTED,
+                },
+        };
+        sprintf(msg.s_payload, log_started_fmt, current, getpid(), getppid());
+        msg.s_header.s_payload_len = strlen(msg.s_payload);
+        send_multicast(NULL, &msg);
+    }
+
+    for (size_t i = 1; i <= num_children; i++) {
+        Message msg;
+        if (i == current) {
+            continue;
+        }
+        receive(NULL, i, &msg);
+    }
 }
