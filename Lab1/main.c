@@ -10,10 +10,31 @@
 #include "ipc.h"
 #include "pa1.h"
 
+void close_pipes_that_dont_belong_to_us() {
+    for (size_t source = 0; source < processes_count; source++) {
+        for (size_t destination = 0; destination < processes_count;
+             destination++) {
+            if (source != current && destination != current &&
+                source != destination) {
+                close(output[source][destination]);
+                close(input[source][destination]);
+            }
+            if (source == current && destination != current) {
+                close(input[source][destination]);
+            }
+            if (destination == current && source != current) {
+                close(output[source][destination]);
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[]){
     pid_t pids[MAX_N+1];
     int num_children = 4;
     processes_count = 5;
+
+    close_pipes_that_dont_belong_to_us();
 
     for (size_t source = 0; source < processes_count; source++) {
         for (size_t destination = 0; destination < processes_count; destination++) {
@@ -24,7 +45,6 @@ int main(int argc, char* argv[]){
             }
         }
     }
-
 
     // create porcessess
     pids[PARENT_ID] = getpid();
@@ -48,6 +68,7 @@ int main(int argc, char* argv[]){
                     .s_type = STARTED,
                 },
         };
+        printf(log_started_fmt, current, getpid(), getppid());
         sprintf(msg.s_payload, log_started_fmt, current, getpid(), getppid());
         msg.s_header.s_payload_len = strlen(msg.s_payload);
         send_multicast(NULL, &msg);
@@ -58,6 +79,29 @@ int main(int argc, char* argv[]){
         if (i == current) {
             continue;
         }
+        printf("Proccess %d waits for started from %d\n", current, i);
         receive(NULL, i, &msg);
+        printf("Proccess %d received started from %d\n", current, i);
+    }
+    printf(log_received_all_started_fmt, current);
+    if(current!=PARENT_ID){
+        Message msg = {
+            .s_header =
+                {
+                    .s_magic = MESSAGE_MAGIC,
+                    .s_type = DONE,
+                },
+        };
+        printf(log_started_fmt, current);
+        sprintf(msg.s_payload, log_done_fmt, current);
+        msg.s_header.s_payload_len = strlen(msg.s_payload);
+        send_multicast(NULL, &msg);
+    }
+    printf(log_received_all_done_fmt, current);
+
+    if (current == PARENT_ID) {
+        for (int i = 1; i <= processes_count; i++) {
+            waitpid(pids[i], NULL, 0);
+        }
     }
 }
