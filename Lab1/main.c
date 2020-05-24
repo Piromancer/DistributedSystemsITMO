@@ -79,9 +79,7 @@ int main(int argc, char* argv[]){
         if (i == current) {
             continue;
         }
-        printf("Proccess %d waits for started from %d\n", current, i);
         receive(NULL, i, &msg);
-        printf("Proccess %d received started from %d\n", current, i);
     }
     printf(log_received_all_started_fmt, current);
     if(current!=PARENT_ID){
@@ -92,7 +90,7 @@ int main(int argc, char* argv[]){
                     .s_type = DONE,
                 },
         };
-        printf(log_started_fmt, current);
+        printf(log_done_fmt, current);
         sprintf(msg.s_payload, log_done_fmt, current);
         msg.s_header.s_payload_len = strlen(msg.s_payload);
         send_multicast(NULL, &msg);
