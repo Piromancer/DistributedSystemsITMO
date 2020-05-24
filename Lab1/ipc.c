@@ -2,6 +2,7 @@
 #include "io.h"
 #include "ipc.h"
 #include "err.h"
+#include <unistd.h>
 
 typedef enum {
     WRONG_DESTINATION_ID = 1,
@@ -36,6 +37,7 @@ int send(void * self, local_id dst, const Message * msg){
         write(output[current][dst], &msg->s_header, sizeof(MessageHeader));
         write(output[current][dst], &msg->s_payload, msg->s_header.s_payload_len);
     }
+    return 0;
 }
 
 int send_multicast(void * self, const Message * msg){

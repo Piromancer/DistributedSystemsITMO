@@ -10,7 +10,7 @@
 #include "ipc.h"
 #include "pa1.h"
 
-void close_pipes_that_dont_belong_to_us() {
+void close_unused_pipes() {
     for (size_t source = 0; source < processes_count; source++) {
         for (size_t destination = 0; destination < processes_count;
              destination++) {
@@ -31,10 +31,12 @@ void close_pipes_that_dont_belong_to_us() {
 
 int main(int argc, char* argv[]){
     pid_t pids[MAX_N+1];
-    int num_children = 4;
-    processes_count = 5;
+    int num_children;
 
-    close_pipes_that_dont_belong_to_us();
+    num_children = strtol(argv[2], NULL, 10);
+    processes_count = num_children+1;
+
+    close_unused_pipes();
 
     for (size_t source = 0; source < processes_count; source++) {
         for (size_t destination = 0; destination < processes_count; destination++) {
