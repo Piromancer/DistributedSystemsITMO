@@ -5,103 +5,123 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <getopt.h>
 
 #include "io.h"
 #include "ipc.h"
 #include "pa1.h"
 
 void close_unused_pipes() {
-    for (size_t source = 0; source < processes_count; source++) {
-        for (size_t destination = 0; destination < processes_count;
-             destination++) {
-            if (source != current && destination != current &&
-                source != destination) {
-                close(output[source][destination]);
-                close(input[source][destination]);
+    for (unsigned int src = 0; src < processes_count; src++) {
+        for (unsigned int dst = 0; dst < processes_count; dst++) {
+            if (src != current && dst != current && src != dst) {
+                close(output[src][dst]);
+                close(input[src][dst]);
             }
-            if (source == current && destination != current) {
-                close(input[source][destination]);
+            if (src == current && dst != current) {
+                close(input[src][dst]);
             }
-            if (destination == current && source != current) {
-                close(output[source][destination]);
+            if (dst == current && src != current) {
+                close(output[src][dst]);
             }
         }
     }
 }
 
-int main(int argc, char* argv[]){
-    pid_t pids[MAX_N+1];
-    int num_children;
 
-    num_children = strtol(argv[2], NULL, 10);
-    processes_count = num_children+1;
+void display_usage(){
+    puts( "-p X, where X - number of processes 0..10" );
+}
+
+
+//send_msg
+void send_msg(local_id c_id, int16_t type) {
+    if (c_id != PARENT_ID){
+        Message msg = { .s_header = { .s_magic = MESSAGE_MAGIC, .s_type = type, }, };
+        sprintf(msg.s_payload, log_started_fmt, c_id, getpid(), getppid());
+        msg.s_header.s_payload_len = strlen(msg.s_payload);
+        send_multicast(NULL, &msg);
+    }
+}
+
+//receive_msg
+void receive_msg(local_id c_id, unsigned int child_processes_count){
+    for (int i = 1; i <= child_processes_count; i++){
+        Message msg;
+        if (i != c_id){
+            receive(NULL, i, &msg);
+        }
+    }
+}
+
+
+int main( int argc, char* argv[] ){
+
+    unsigned int children_processes_count;
+
+    int opt = 0;
+    static const char* optString = "p:?";
+    opt = getopt( argc, argv, optString );
+    while( opt != -1 ) {
+        switch( opt ) {
+            case 'p':
+                children_processes_count = strtoul(optarg, NULL, 10);
+                break;
+            case '?':
+                display_usage();
+                return 1;
+            default:
+                return 1;
+        }
+        opt = getopt( argc, argv, optString );
+    }
+    processes_count = children_processes_count + 1;
+
+    pid_t proc_pids[MAX_N+1];
 
     close_unused_pipes();
-
-    for (size_t source = 0; source < processes_count; source++) {
-        for (size_t destination = 0; destination < processes_count; destination++) {
-            if (source != destination) {
-                int fd[2]; pipe(fd);
-                input[source][destination] = fd[0];
-                output[source][destination] = fd[1];
+    //pipes
+    for (int src = 0; src < processes_count; src++) {
+        for (int dst = 0; dst < processes_count; dst++) {
+            if (src != dst){
+                int fld[2];
+                pipe(fld);
+                input[src][dst] = fld[0];
+                output[src][dst] = fld[1];
+                //log?
             }
         }
     }
 
+
+    proc_pids[PARENT_ID] = getpid();
     // create porcessess
-    pids[PARENT_ID] = getpid();
-    for (size_t id = 1; id <= num_children; id++) {
+    for (int id = 1; id <= children_processes_count; id++) {
         int child_pid = fork();
-        if (child_pid > 0) {
-            current = PARENT_ID;
-            pids[id] = child_pid;
-        } else if (child_pid == 0) {
-            // We are inside the child process.
-            current = id;
-            break;
+        if (child_pid != -1) {
+            if (child_pid == 0) {
+                current = id;
+                break;
+            } else {
+                current = PARENT_ID;
+            }
+        } else {
+            puts("Can't create process!\n");
         }
+
     }
 
-    if(current!=PARENT_ID){
-        Message msg = {
-            .s_header =
-                {
-                    .s_magic = MESSAGE_MAGIC,
-                    .s_type = STARTED,
-                },
-        };
-        printf(log_started_fmt, current, getpid(), getppid());
-        sprintf(msg.s_payload, log_started_fmt, current, getpid(), getppid());
-        msg.s_header.s_payload_len = strlen(msg.s_payload);
-        send_multicast(NULL, &msg);
-    }
 
-    for (size_t i = 1; i <= num_children; i++) {
-        Message msg;
-        if (i == current) {
-            continue;
-        }
-        receive(NULL, i, &msg);
-    }
+    send_msg(current, STARTED);
+    receive_msg(current, children_processes_count);
     printf(log_received_all_started_fmt, current);
-    if(current!=PARENT_ID){
-        Message msg = {
-            .s_header =
-                {
-                    .s_magic = MESSAGE_MAGIC,
-                    .s_type = DONE,
-                },
-        };
-        printf(log_done_fmt, current);
-        sprintf(msg.s_payload, log_done_fmt, current);
-        msg.s_header.s_payload_len = strlen(msg.s_payload);
-        send_multicast(NULL, &msg);
-    }
+    send_msg(current, DONE);
     printf(log_received_all_done_fmt, current);
 
     if (current == PARENT_ID) {
         for (int i = 1; i <= processes_count; i++) {
-            waitpid(pids[i], NULL, 0);
+            waitpid(proc_pids[i], NULL, 0);
         }
     }
+    return 0;
 }
