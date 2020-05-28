@@ -35,10 +35,11 @@ void display_usage(){
 
 
 //send_msg
-void send_msg(local_id c_id, int16_t type) {
+void send_msg(local_id c_id, int16_t type, const char* const log) {
     if (c_id != PARENT_ID){
         Message msg = { .s_header = { .s_magic = MESSAGE_MAGIC, .s_type = type, }, };
-        sprintf(msg.s_payload, log_started_fmt, c_id, getpid(), getppid());
+        printf(log, current, getpid(), getppid());
+        sprintf(msg.s_payload, log, c_id, getpid(), getppid());
         msg.s_header.s_payload_len = strlen(msg.s_payload);
         send_multicast(NULL, &msg);
     }
@@ -112,10 +113,10 @@ int main( int argc, char* argv[] ){
     }
 
 
-    send_msg(current, STARTED);
+    send_msg(current, STARTED, log_started_fmt);
     receive_msg(current, children_processes_count);
     printf(log_received_all_started_fmt, current);
-    send_msg(current, DONE);
+    send_msg(current, DONE, log_done_fmt);
     printf(log_received_all_done_fmt, current);
 
     if (current == PARENT_ID) {
