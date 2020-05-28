@@ -36,13 +36,16 @@ void display_usage(){
 
 //send_msg
 void send_msg(local_id c_id, int16_t type, const char* const log) {
+    FILE * fp = fopen ("events.log","a");
     if (c_id != PARENT_ID){
         Message msg = { .s_header = { .s_magic = MESSAGE_MAGIC, .s_type = type, }, };
         printf(log, current, getpid(), getppid());
+        fprintf(fp, log, current, getpid(), getppid());
         sprintf(msg.s_payload, log, c_id, getpid(), getppid());
         msg.s_header.s_payload_len = strlen(msg.s_payload);
         send_multicast(NULL, &msg);
     }
+    fclose(fp);
 }
 
 //receive_msg
@@ -57,9 +60,9 @@ void receive_msg(local_id c_id, unsigned int child_processes_count){
 
 
 int main( int argc, char* argv[] ){
-
     unsigned int children_processes_count;
-
+    FILE * fp = fopen("events.log", "w");
+    fclose(fp);
     int opt = 0;
     static const char* optString = "p:?";
     opt = getopt( argc, argv, optString );
@@ -116,8 +119,13 @@ int main( int argc, char* argv[] ){
     send_msg(current, STARTED, log_started_fmt);
     receive_msg(current, children_processes_count);
     printf(log_received_all_started_fmt, current);
+    fp = fopen ("events.log","a");
+    fprintf(fp, log_received_all_started_fmt, current);
+    fclose(fp);
     send_msg(current, DONE, log_done_fmt);
+    fp = fopen ("events.log","a");
     printf(log_received_all_done_fmt, current);
+    fclose(fp);
 
     if (current == PARENT_ID) {
         for (int i = 1; i <= processes_count; i++) {
