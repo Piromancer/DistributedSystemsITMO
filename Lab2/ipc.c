@@ -54,7 +54,6 @@ int receive(void * self, local_id from, Message * msg){
         return WRONG_SENDER_ID;
     }
     read_n_bytes(input[from][current], &msg->s_header, sizeof(MessageHeader));
-    
     read_n_bytes(input[from][current], &msg->s_payload, msg->s_header.s_payload_len);
     
     if (msg->s_header.s_magic != MESSAGE_MAGIC) {

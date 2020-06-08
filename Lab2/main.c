@@ -36,7 +36,6 @@ void display_usage(){
 
 //send_msg
 void send_msg(local_id c_id, int16_t type, const char* const log) {
-    FILE * fp = fopen ("events.log","a");
     if (c_id != PARENT_ID){
         Message msg = { .s_header = { .s_magic = MESSAGE_MAGIC, .s_type = type, }, };
         printf(log, current, getpid(), getppid());
@@ -60,8 +59,7 @@ void receive_msg(local_id c_id, unsigned int child_processes_count){
 
 int main( int argc, char* argv[] ){
     unsigned int children_processes_count;
-    FILE * fp = fopen("events.log", "a");
-    fclose(fp);
+    fp = fopen("events.log", "w");
     int opt = 0;
     static const char* optString = "p:?";
     opt = getopt( argc, argv, optString );
@@ -82,7 +80,6 @@ int main( int argc, char* argv[] ){
 
     pid_t proc_pids[MAX_N+1];
 
-    close_unused_pipes();
     //pipes
     for (int src = 0; src < processes_count; src++) {
         for (int dst = 0; dst < processes_count; dst++) {
@@ -113,15 +110,13 @@ int main( int argc, char* argv[] ){
         }
 
     }
-
+    close_unused_pipes();
 
     send_msg(current, STARTED, log_started_fmt);
     receive_msg(current, children_processes_count);
     printf(log_received_all_started_fmt, current);
-    fp = fopen ("events.log","a");
     fprintf(fp, log_received_all_started_fmt, current);
     send_msg(current, DONE, log_done_fmt);
-    fp = fopen ("events.log","a");
     printf(log_received_all_done_fmt, current);
 
     if (current == PARENT_ID) {

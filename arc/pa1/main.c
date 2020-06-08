@@ -45,6 +45,7 @@ void send_msg(local_id c_id, int16_t type, const char* const log) {
         msg.s_header.s_payload_len = strlen(msg.s_payload);
         send_multicast(NULL, &msg);
     }
+    fclose(fp);
 }
 
 //receive_msg
@@ -60,7 +61,7 @@ void receive_msg(local_id c_id, unsigned int child_processes_count){
 
 int main( int argc, char* argv[] ){
     unsigned int children_processes_count;
-    FILE * fp = fopen("events.log", "a");
+    FILE * fp = fopen("events.log", "w");
     fclose(fp);
     int opt = 0;
     static const char* optString = "p:?";
@@ -120,15 +121,16 @@ int main( int argc, char* argv[] ){
     printf(log_received_all_started_fmt, current);
     fp = fopen ("events.log","a");
     fprintf(fp, log_received_all_started_fmt, current);
+    fclose(fp);
     send_msg(current, DONE, log_done_fmt);
     fp = fopen ("events.log","a");
     printf(log_received_all_done_fmt, current);
+    fclose(fp);
 
     if (current == PARENT_ID) {
         for (int i = 1; i <= processes_count; i++) {
             waitpid(proc_pids[i], NULL, 0);
         }
     }
-    fclose(fp);
     return 0;
 }
