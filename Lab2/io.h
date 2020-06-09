@@ -7,7 +7,7 @@
 unsigned int processes_count;
 local_id current;
 
-FILE * fp;
+FILE* fp;
 int input[MAX_N][MAX_N];
 int output[MAX_N][MAX_N];
 

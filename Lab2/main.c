@@ -11,7 +11,7 @@
 #include "ipc.h"
 #include "pa1.h"
 
-void close_unused_pipes() {
+void close_unused_pipes(){
     for (unsigned int src = 0; src < processes_count; src++) {
         for (unsigned int dst = 0; dst < processes_count; dst++) {
             if (src != current && dst != current && src != dst) {
