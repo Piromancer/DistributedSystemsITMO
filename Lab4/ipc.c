@@ -20,6 +20,7 @@ int send_multicast(void * self, const Message * msg){
 int receive(void * self, local_id from, Message * msg){
     read(input[from][current], &msg->s_header, sizeof(MessageHeader));
     read(input[from][current], &msg->s_payload, msg->s_header.s_payload_len);
+    
     return 0;
 }
 
