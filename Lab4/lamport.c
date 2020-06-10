@@ -76,8 +76,58 @@ int request_cs(){
 }
 
 int wait_queue(){
-    int num_prints = current * 5;
-    int running_processes = processes_count;
+    int wait_reply = processes_count - 1;
+    int running_processes = processes_count - 1;
+    while (running_processes > 0){
+        Message msg;
+        receive_any(NULL, msg);
+        set_time(msg.s_header.s_local_time);
+        switch (msg.s_header.s_type){
+            case CS_REQUEST: {
+                break;
+            }
+            case CS_REPLY: {
+                wait_reply--;
+                if (wait_reply == 0){
+                    char str[128];
+                    int num_prints = current * 5;
+
+                    for (int i = 1; i <= num_prints; ++i) {
+                        memset(str, 0, sizeof(str));
+                        sprintf(str, log_loop_operation_fmt, current, i, num_prints);
+                        print(str);
+                    }
+                    Message message;
+
+                    increase_time();
+                    message.s_header = (MessageHeader) {
+                        .s_magic = MESSAGE_MAGIC,
+                        .s_type  = CS_RELEASE,
+                        .s_local_time = get_time(),
+                        .s_payload_len = 0
+                    };
+                    send_multicast(NULL, &message);
+
+                    increase_time();
+                    message.s_header = (MessageHeader) {
+                        .s_magic = MESSAGE_MAGIC,
+                        .s_type  = DONE,
+                        .s_local_time = get_time(),
+                        .s_payload_len = 0
+                    };
+                }
+                break;
+            }
+            case CS_RELEASE: {
+                removeData();
+                break;
+            }
+            case DONE: {
+                running_processes--;
+                break;
+            }
+        }
+    }
     // while (wait_reply != 0 || (process->queue->len && process->queue->start->id != process->self_id) ) {
     //     int id;
     //     while ((id = receive_any((void*)process, &message)) < 0);
