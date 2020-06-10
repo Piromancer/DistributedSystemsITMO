@@ -6,10 +6,11 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <getopt.h>
+#include <fcntl.h>
 
 #include "io.h"
 #include "ipc.h"
-#include "pa1.h"
+#include "pa2345.h"
 
 void close_unused_pipes() {
     for (unsigned int src = 0; src < processes_count; src++) {
@@ -39,7 +40,9 @@ void send_msg(local_id c_id, int16_t type, const char* const log) {
     if (c_id != PARENT_ID){
         Message msg = { .s_header = { .s_magic = MESSAGE_MAGIC, .s_type = type, }, };
         printf(log, current, getpid(), getppid());
+        pthread_mutex_lock (&fp);
         fprintf(fp, log, current, getpid(), getppid());
+        pthread_mutex_unlock (&fp);
         sprintf(msg.s_payload, log, c_id, getpid(), getppid());
         msg.s_header.s_payload_len = strlen(msg.s_payload);
         send_multicast(NULL, &msg);
@@ -59,6 +62,7 @@ void receive_msg(local_id c_id, unsigned int child_processes_count){
 
 int main( int argc, char* argv[] ){
     unsigned int children_processes_count;
+    int mutexl = 1;
     fp = fopen("events.log", "w");
     int opt = 0;
     static const char* optString = "p:?";
@@ -88,6 +92,10 @@ int main( int argc, char* argv[] ){
                 pipe(fld);
                 input[src][dst] = fld[0];
                 output[src][dst] = fld[1];
+                unsigned int flags1 = fcntl(fld[0], F_GETFL, 0);
+                unsigned int flags2 = fcntl(fld[1], F_GETFL, 0);
+                fcntl(fld[0], F_SETFL, flags1 | O_NONBLOCK);
+                fcntl(fld[1], F_SETFL, flags2 | O_NONBLOCK);
                 //log?
             }
         }
@@ -115,7 +123,22 @@ int main( int argc, char* argv[] ){
     send_msg(current, STARTED, log_started_fmt);
     receive_msg(current, children_processes_count);
     printf(log_received_all_started_fmt, current);
+
+
+    //output loop
+    char str[128];
+    int num_prints = current * 5;
+
+    for (int i = 1; i <= num_prints; ++i) {
+        memset(str, 0, sizeof(str));
+        sprintf(str, log_loop_operation_fmt, current, i, num_prints);
+        print(str);
+    }
+
+
+    pthread_mutex_lock (&fp);
     fprintf(fp, log_received_all_started_fmt, current);
+    pthread_mutex_unlock (&fp);
     send_msg(current, DONE, log_done_fmt);
     printf(log_received_all_done_fmt, current);
 
