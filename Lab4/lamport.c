@@ -78,7 +78,6 @@ int request_cs(){
 int wait_queue(){
     int num_prints = current * 5;
     int running_processes = processes_count;
-    while
     // while (wait_reply != 0 || (process->queue->len && process->queue->start->id != process->self_id) ) {
     //     int id;
     //     while ((id = receive_any((void*)process, &message)) < 0);
