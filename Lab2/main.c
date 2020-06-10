@@ -9,7 +9,8 @@
 
 #include "io.h"
 #include "ipc.h"
-#include "pa1.h"
+#include "pa2345.h"
+#include "banking.h"
 
 void close_unused_pipes(){
     for (unsigned int src = 0; src < processes_count; src++) {
@@ -30,7 +31,7 @@ void close_unused_pipes(){
 
 
 void display_usage(){
-    puts( "-p X, where X - number of processes 0..10" );
+    puts( "-p X Y..Y, where X - number of processes 0..10, Y - start balance for each process" );
 }
 
 
@@ -57,6 +58,40 @@ void receive_msg(local_id c_id, unsigned int child_processes_count){
 }
 
 
+/* from start file pa2345.h
+#include "banking.h"
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:D:\\CLionProjects\\DSI";
+###
+LD_PRELOAD=D:/CLionProjects/DSI/Lab2/lib64 ./pa2 -p 2 10 20
+
+
+
+int main(int argc, char * argv[])
+{
+    //bank_robbery(parent_data);
+    //print_history(all);
+
+    return 0;
+}*/
+
+void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
+{
+    local_id* cur = parent_data;
+    Message msg;
+    {
+        msg.s_header = (MessageHeader) { .s_local_time = get_physical_time(), .s_magic = MESSAGE_MAGIC, .s_type = TRANSFER, .s_payload_len = sizeof(TransferOrder)};
+        TransferOrder order = { .s_src = src, .s_dst = dst, .s_amount = amount };
+        memcpy(&msg.s_payload, &order, sizeof(TransferOrder));
+        send(cur, src, &msg);
+    }
+    //receive proof
+    receive(cur, dst, &msg);
+}
+
+void hist(local_id cur, balance_t balance){
+    ;
+}
+
 int main( int argc, char* argv[] ){
     unsigned int children_processes_count;
     fp = fopen("events.log", "w");
@@ -67,11 +102,15 @@ int main( int argc, char* argv[] ){
         switch( opt ) {
             case 'p':
                 children_processes_count = strtoul(optarg, NULL, 10);
+                for (int i = 0; i < children_processes_count; i++){
+                    banks[i] = strtoul(argv[i+3], NULL,10);
+                }
                 break;
             case '?':
                 display_usage();
                 return 1;
             default:
+                puts( "Error - unknown error" );
                 return 1;
         }
         opt = getopt( argc, argv, optString );
@@ -106,7 +145,7 @@ int main( int argc, char* argv[] ){
                 current = PARENT_ID;
             }
         } else {
-            puts("Can't create process!\n");
+            puts("Can't create process!");
         }
 
     }
