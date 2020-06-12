@@ -13,7 +13,7 @@ int input[MAX_N][MAX_N];
 int output[MAX_N][MAX_N];
 
 balance_t banks[10];
-typedef struct{ BalanceHistory balanceHistory; local_id current; AllHistory allHistory;} bank;
+typedef struct{ BalanceHistory balanceHistory; local_id current; AllHistory allHistory; timestamp_t lamp_time;} bank;
 bank target;
 pid_t pids[MAX_N];
 

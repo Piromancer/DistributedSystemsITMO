@@ -275,7 +275,7 @@ int main( int argc, char* argv[] ){
         }
     }
 
-
+    close_unused_pipes();
     pids[PARENT_ID] = getpid();
     // create porcessess
     for (int id = 1; id <= children_processes_count; id++) {
@@ -293,7 +293,7 @@ int main( int argc, char* argv[] ){
         }
 
     }
-    close_unused_pipes();
+
 
     if (cur_bank->current == PARENT_ID) {
         parent_start(cur_bank);
