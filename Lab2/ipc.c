@@ -37,9 +37,7 @@ int receive_any(void* self, Message* msg){
     while (true) {
         from++;
         if (from == cur->current) continue;
-        if (from >= processes_count) {
-            from -= processes_count;
-        }
+        if (from >= processes_count) from = 0;
 
         unsigned int flags = fcntl(input[from][cur->current], F_GETFL, 0);
         fcntl(input[from][cur->current], F_SETFL, flags | O_NONBLOCK);
