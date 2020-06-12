@@ -49,7 +49,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
         if (i != cur_bank->current){
             receive(&target, i, &message);
             if (cur_bank->lamp_time < message.s_header.s_local_time){
-            cur_bank->lamp_time = message.s_header.s_local_time;
+                cur_bank->lamp_time = message.s_header.s_local_time;
             }
             cur_bank->lamp_time++;
         }
@@ -176,7 +176,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
 
                 timestamp_t send_time = get_lamport_time();
 
-                for (timestamp_t i = 0; i < 256; i++){
+                for (timestamp_t i = send_time; i < 256; i++){
                     balanceHistory->s_history->s_balance -= transferOrder->s_amount;
                 }
                 newmsg.s_header.s_local_time = send_time;
@@ -240,13 +240,13 @@ void child_start (bank* cur_bank, balance_t init_bal){
 }
 
 void parent_start(bank* cur_bank){
-    Message msg;
+
     for (int i = 1; i < processes_count; i++){
+        Message msg;
         if (i != cur_bank->current) {
             receive(&target, i, &msg);
             if (cur_bank->lamp_time < msg.s_header.s_local_time){
                 cur_bank->lamp_time = msg.s_header.s_local_time;
-
             }
             cur_bank->lamp_time++;
         }
@@ -267,8 +267,8 @@ void parent_start(bank* cur_bank){
         Message newmsg;
         if (i != cur_bank->current) {
             receive(&target, i, &newmsg);
-            if (cur_bank->lamp_time < msg.s_header.s_local_time) {
-                cur_bank->lamp_time = msg.s_header.s_local_time;
+            if (cur_bank->lamp_time < newmsg.s_header.s_local_time) {
+                cur_bank->lamp_time = newmsg.s_header.s_local_time;
 
             }
             cur_bank->lamp_time++;
@@ -324,8 +324,7 @@ void display_usage(){
 
 
 
-void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
-{
+void transfer(void* parent_data, local_id src, local_id dst, balance_t amount){
     bank* cur = parent_data;
     Message msg;
     {
