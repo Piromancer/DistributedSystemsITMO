@@ -362,8 +362,8 @@ int main( int argc, char* argv[] ){
     processes_count = children_processes_count + 1;
 
     //pipes
-    for (int src = 0; src <= processes_count; src++) {
-        for (int dst = 0; dst <= processes_count; dst++) {
+    for (int src = 0; src < processes_count; src++) {
+        for (int dst = 0; dst < processes_count; dst++) {
             if (src != dst){
                 int fld[2];
                 pipe(fld);
