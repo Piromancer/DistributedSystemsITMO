@@ -35,7 +35,8 @@ int receive_any(void* self, Message* msg){
     bank *cur = self;
     int from = cur->current;
     while (true) {
-        if (++from == cur->current) from++;
+        from++;
+        if (from == cur->current) continue;
         if (from >= processes_count) {
             from -= processes_count;
         }

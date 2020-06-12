@@ -44,13 +44,12 @@ void child_start (bank* cur_bank, balance_t init_bal){
     size_t not_ready = processes_count - 2;
     bool flag = true;
     while (flag){
-        Message mesg;
-        receive_any(cur_bank, &mesg);
+        receive_any(cur_bank, &msg);
 
-        MessageType messageType = mesg.s_header.s_type;
+        MessageType messageType = msg.s_header.s_type;
 
         if (messageType == TRANSFER){
-            TransferOrder* transferOrder = (TransferOrder*) mesg.s_payload;
+            TransferOrder* transferOrder = (TransferOrder*) msg.s_payload;
             timestamp_t transfer_time = get_physical_time();
 
             BalanceHistory* balanceHistory = &cur_bank->balanceHistory;
@@ -58,7 +57,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
 
             if (transferOrder->s_src == cur_bank->current){
                 res = -transferOrder->s_amount;
-                send(&target, transferOrder->s_dst, &mesg);
+                send(&target, transferOrder->s_dst, &msg);
                 printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
                 fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
             } else if (transferOrder->s_dst == cur_bank->current){
