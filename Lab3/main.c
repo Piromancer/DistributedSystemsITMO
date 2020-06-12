@@ -15,6 +15,10 @@
 #include "banking.h"
 
 
+timestamp_t get_lamport_time(){
+    return target.lamp_time;
+}
+
 void child_start (bank* cur_bank, balance_t init_bal){
     cur_bank->balanceHistory.s_id = cur_bank->current;
     cur_bank->balanceHistory.s_history_len = 1;
@@ -91,41 +95,52 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 fprintf(fp, log_transfer_out_fmt, sendTime, cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
             } else if (transferOrder->s_dst == cur_bank->current){
 
-                //todo
-                if (cur_bank->lamp_time){};
+                if (cur_bank->lamp_time < transfer_time){
+                    cur_bank->lamp_time = transfer_time;
+                }
+                cur_bank->lamp_time++;
+
+                //res = +transferOrder->s_amount;
+
+                timestamp_t rec_time = get_lamport_time();
+                for (timestamp_t i = 0; i < rec_time; i++){
+                    balanceHistory->s_history[i].s_balance_pending_in += res;
+                }
+                for (timestamp_t j = rec_time; j < 256; j++) {
+                    balanceHistory->s_history[j].s_balance += res;
+                }
 
 
-                res = +transferOrder->s_amount;
                 Message ack;
                 ack.s_header = (MessageHeader) {
-                    .s_magic = MESSAGE_MAGIC, .s_type = ACK, .s_local_time = transfer_time, .s_payload_len = 0
+                    .s_magic = MESSAGE_MAGIC, .s_type = ACK, .s_local_time = get_lamport_time(), .s_payload_len = 0
                 };
-                send(&target, 0, &ack);
-                printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
-                fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
-            }
-            if (transfer_time >= balanceHistory->s_history_len){
-                balanceHistory->s_history_len = transfer_time + 1;
-
-            }
-            for (timestamp_t time = transfer_time; time < 256; time++){
-                balanceHistory->s_history[time].s_balance += res;
+                send(&target, PARENT_ID, &ack);
+                printf(log_transfer_out_fmt, get_lamport_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
+                fprintf(fp, log_transfer_out_fmt, get_lamport_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
             }
         }
         if (messageType == STOP){
             flag = false;
+            if (cur_bank->lamp_time < msg.s_header.s_local_time){
+                cur_bank->lamp_time = msg.s_header.s_local_time;
+            }
         }
         if (messageType == DONE){
             not_ready--;
+            if (cur_bank->lamp_time < msg.s_header.s_local_time){
+                cur_bank->lamp_time = msg.s_header.s_local_time;
+            }
         }
 
     }
+    cur_bank->lamp_time++;
     msg = (Message) {
             .s_header = {
-                    .s_magic = MESSAGE_MAGIC, .s_type = DONE
+                    .s_magic = MESSAGE_MAGIC, .s_type = DONE, .s_local_time = get_lamport_time()
             }
     };
-    timestamp = get_physical_time();
+    timestamp = get_lamport_time();
     printf((const char *) &msg, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
     fprintf(fp, (const char *) &msg, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
 
@@ -135,53 +150,85 @@ void child_start (bank* cur_bank, balance_t init_bal){
     while (not_ready > 0){
         Message newmsg;
         receive_any(cur_bank, &newmsg);
+
+        if (cur_bank->lamp_time < newmsg.s_header.s_local_time){
+            cur_bank->lamp_time = newmsg.s_header.s_local_time;
+        }
+        cur_bank->lamp_time++;
+
         MessageType messageType = newmsg.s_header.s_type;
 
         if (messageType == TRANSFER){
             TransferOrder* transferOrder = (TransferOrder*) newmsg.s_payload;
-            timestamp_t transfer_time = get_physical_time();
+            timestamp_t transfer_time = newmsg.s_header.s_local_time;
 
             BalanceHistory* balanceHistory = &cur_bank->balanceHistory;
             balance_t res = 0;
 
             if (transferOrder->s_src == cur_bank->current){
-                res = -transferOrder->s_amount;
+                //res = -transferOrder->s_amount;
+
+                if (cur_bank->lamp_time < transfer_time){
+                    cur_bank->lamp_time = transfer_time;
+                }
+                cur_bank->lamp_time++;
+
+                timestamp_t send_time = get_lamport_time();
+
+                for (timestamp_t i = 0; i < 256; i++){
+                    balanceHistory->s_history->s_balance -= transferOrder->s_amount;
+                }
+                newmsg.s_header.s_local_time = send_time;
                 send(&target, transferOrder->s_dst, &newmsg);
-                printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
-                fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
+                printf(log_transfer_out_fmt, send_time, cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
+                fprintf(fp, log_transfer_out_fmt, send_time, cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
 
             } else if (transferOrder->s_dst == cur_bank->current){
-                res = +transferOrder->s_amount;
+                //res = +transferOrder->s_amount;
+
+                if (cur_bank->lamp_time < transfer_time){
+                    cur_bank->lamp_time = transfer_time;
+                }
+                cur_bank->lamp_time++;
+
+                timestamp_t rec_time = get_lamport_time();
+                for (timestamp_t i = 0; i < rec_time; i++){
+                    balanceHistory->s_history[i].s_balance_pending_in += res;
+                }
+                for (timestamp_t j = rec_time; j < 256; j++) {
+                    balanceHistory->s_history[j].s_balance += res;
+                }
+
+
+
                 Message ack;
                 ack.s_header = (MessageHeader) {
-                        .s_magic = MESSAGE_MAGIC, .s_type = ACK, .s_local_time = transfer_time, .s_payload_len = 0
+                        .s_magic = MESSAGE_MAGIC, .s_type = ACK, .s_local_time = get_lamport_time(), .s_payload_len = 0
                 };
                 send(&target, PARENT_ID, &ack);
-                printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
-                fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
-            }
-            if (transfer_time >= balanceHistory->s_history_len){
-                balanceHistory->s_history_len = transfer_time + 1;
-
-            }
-            for (timestamp_t time = transfer_time; time < 256; time++){
-                balanceHistory->s_history[time].s_balance += res;
+                printf(log_transfer_out_fmt, get_lamport_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
+                fprintf(fp, log_transfer_out_fmt, get_lamport_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
             }
         }
         if (messageType == DONE){
             not_ready--;
+            if (cur_bank->lamp_time < newmsg.s_header.s_local_time){
+                cur_bank->lamp_time = newmsg.s_header.s_local_time;
+            }
         }
     }
 
-    printf(log_received_all_done_fmt, get_physical_time(), cur_bank->current);
-    fprintf(fp, log_received_all_done_fmt, get_physical_time(), cur_bank->current);
+    printf(log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
+    fprintf(fp, log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
+    cur_bank->lamp_time++;
 
-    cur_bank->balanceHistory.s_history_len = get_physical_time() + 1;
+    cur_bank->balanceHistory.s_history_len = get_lamport_time() + 1;
+
     int historySize = sizeof(int8_t) /*local_id */ + sizeof(uint8_t) + cur_bank->balanceHistory.s_history_len* sizeof(BalanceState);
 
     Message res = {
             .s_header = {
-                    .s_magic = MESSAGE_MAGIC, .s_type = BALANCE_HISTORY, .s_local_time = get_physical_time(), .s_payload_len = historySize
+                    .s_magic = MESSAGE_MAGIC, .s_type = BALANCE_HISTORY, .s_local_time = get_lamport_time(), .s_payload_len = historySize
             }
     };
     memcpy(&res.s_payload, &cur_bank->balanceHistory, historySize);
@@ -192,28 +239,36 @@ void child_start (bank* cur_bank, balance_t init_bal){
 void parent_start(bank* cur_bank){
     Message msg;
     for (int i = 1; i < processes_count; i++){
-        if (i != cur_bank->current)
+        if (i != cur_bank->current) {
             receive(&target, i, &msg);
-
+            if (cur_bank->lamp_time < msg.s_header.s_local_time){
+                cur_bank->lamp_time = msg.s_header.s_local_time;
+                cur_bank->lamp_time++;
+            }
+        }
     }
-    printf(log_received_all_started_fmt, get_physical_time(), cur_bank->current);
-    fprintf(fp, log_received_all_started_fmt, get_physical_time(), cur_bank->current);
+    printf(log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
+    fprintf(fp, log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
 
     bank_robbery(cur_bank, processes_count - 1);
     Message message = {
             .s_header = {
-                    .s_magic = MESSAGE_MAGIC, .s_type = STOP, .s_payload_len = 0, .s_local_time = get_physical_time()
+                    .s_magic = MESSAGE_MAGIC, .s_type = STOP, .s_payload_len = 0, .s_local_time = get_lamport_time()
             }
     };
     send_multicast(&target, &message);
 
     for (int i = 1; i <= processes_count - 1; i++){
-        if (i != cur_bank->current)
+        if (i != cur_bank->current) {
             receive(&target, i, &msg);
-
+            if (cur_bank->lamp_time < msg.s_header.s_local_time) {
+                cur_bank->lamp_time = msg.s_header.s_local_time;
+                cur_bank->lamp_time++;
+            }
+        }
     }
-    printf(log_received_all_done_fmt, get_physical_time(), cur_bank->current);
-    fprintf(fp, log_received_all_done_fmt, get_physical_time(), cur_bank->current);
+    printf(log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
+    fprintf(fp, log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
 
     cur_bank->allHistory.s_history_len = processes_count - 1;
     for (int i = 1; i <= processes_count - 1; i++){
@@ -222,6 +277,10 @@ void parent_start(bank* cur_bank){
         if (message_type == BALANCE_HISTORY){
             BalanceHistory* childrenHistory = (BalanceHistory*) &msg.s_payload;
             cur_bank->allHistory.s_history[i-1] = *childrenHistory;
+            if (cur_bank->lamp_time < message.s_header.s_local_time){
+                cur_bank->lamp_time = message.s_header.s_local_time;
+                cur_bank->lamp_time++;
+            }
         }
     }
 
@@ -254,17 +313,26 @@ void display_usage(){
     puts( "-p X Y..Y, where X - number of processes 0..10, Y - start balance for each process" );
 }
 
+
+
 void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
 {
-    local_id* cur = parent_data;
+    bank * cur = parent_data;
     Message msg;
     {
-        msg.s_header = (MessageHeader) { .s_local_time = get_physical_time(), .s_magic = MESSAGE_MAGIC, .s_type = TRANSFER, .s_payload_len = sizeof(TransferOrder)};
+        cur->lamp_time++;
+        msg.s_header = (MessageHeader) { .s_local_time = get_lamport_time(), .s_magic = MESSAGE_MAGIC, .s_type = TRANSFER, .s_payload_len = sizeof(TransferOrder)};
         TransferOrder order = { .s_src = src, .s_dst = dst, .s_amount = amount };
         memcpy(&msg.s_payload, &order, sizeof(TransferOrder));
         send(cur, src, &msg);
     }
     receive(cur, dst, &msg);
+    if (msg.s_header.s_type == ACK){
+        if (cur->lamp_time < msg.s_header.s_local_time){
+            cur->lamp_time = msg.s_header.s_local_time;
+            cur->lamp_time++;
+        }
+    }
 }
 
 int main( int argc, char* argv[] ){
@@ -308,6 +376,7 @@ int main( int argc, char* argv[] ){
             }
         }
     }
+    cur_bank->lamp_time = 0;
 
 
     pids[PARENT_ID] = getpid();
