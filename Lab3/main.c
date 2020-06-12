@@ -75,7 +75,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
             timestamp_t transfer_time = msg9k.s_header.s_local_time;
 
             BalanceHistory* balanceHistory = &cur_bank->balanceHistory;
-            balance_t res = 0;
+            balance_t money = 0;
 
             if (transferOrder->s_src == cur_bank->current){
                 if (cur_bank->lamp_time < transfer_time){
@@ -89,7 +89,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
 
                 msg9k.s_header.s_local_time = sendTime;
 
-                //res = transferOrder->s_amount;
+                //money = transferOrder->s_amount;
                 send(&target, transferOrder->s_dst, &msg9k);
                 printf(log_transfer_out_fmt, sendTime, cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
                 fprintf(fp, log_transfer_out_fmt, sendTime, cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
@@ -100,14 +100,14 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 }
                 cur_bank->lamp_time++;
 
-                res = transferOrder->s_amount;
+                money = transferOrder->s_amount;
 
                 timestamp_t rec_time = get_lamport_time();
                 for (timestamp_t i = transfer_time; i < rec_time; i++){
-                    balanceHistory->s_history[i].s_balance_pending_in += res;
+                    balanceHistory->s_history[i].s_balance_pending_in += money;
                 }
                 for (timestamp_t i = rec_time; i < 256; i++){
-                    balanceHistory->s_history[i].s_balance += res;
+                    balanceHistory->s_history[i].s_balance += money;
                 }
 
 
@@ -163,10 +163,10 @@ void child_start (bank* cur_bank, balance_t init_bal){
             timestamp_t transfer_time = newmsg.s_header.s_local_time;
 
             BalanceHistory* balanceHistory = &cur_bank->balanceHistory;
-            balance_t res = 0;
+            balance_t money = 0;
 
             if (transferOrder->s_src == cur_bank->current){
-                //res = transferOrder->s_amount;
+                //money = transferOrder->s_amount;
 
 
                 if (cur_bank->lamp_time < transfer_time){
@@ -192,14 +192,14 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 }
                 cur_bank->lamp_time++;
 
-                res = transferOrder->s_amount;
+                money = transferOrder->s_amount;
 
                 timestamp_t rec_time = get_lamport_time();
                 for (timestamp_t i = transfer_time; i < rec_time; i++){
-                    balanceHistory->s_history[i].s_balance_pending_in += res;
+                    balanceHistory->s_history[i].s_balance_pending_in += money;
                 }
                 for (timestamp_t i = rec_time; i < 256; i++){
-                    balanceHistory->s_history[i].s_balance += res;
+                    balanceHistory->s_history[i].s_balance += money;
                 }
 
 
@@ -227,7 +227,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
 
     cur_bank->balanceHistory.s_history_len = get_lamport_time() + 1;
 
-    //todo
     int historySize = sizeof(uint8_t) + sizeof(uint8_t) + cur_bank->balanceHistory.s_history_len* sizeof(BalanceState);
 
     Message result = {
@@ -256,6 +255,7 @@ void parent_start(bank* cur_bank){
     fprintf(fp, log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
 
     bank_robbery(cur_bank, processes_count - 1);
+    cur_bank->lamp_time++;
     Message message = {
             .s_header = {
                     .s_magic = MESSAGE_MAGIC, .s_type = STOP, .s_payload_len = 0, .s_local_time = get_lamport_time()
