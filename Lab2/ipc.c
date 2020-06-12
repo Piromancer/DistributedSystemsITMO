@@ -12,8 +12,9 @@ int send(void* self, local_id dst, const Message* msg){
 }
 
 int send_multicast(void* self, const Message* msg){
+    bank* cur_bank = self;
     for(local_id dst=0;dst<processes_count;dst++){
-        send(self,dst,msg);
+        send(cur_bank,dst,msg);
     }
     return 0;
 }
