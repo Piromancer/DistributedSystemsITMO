@@ -17,7 +17,4 @@ typedef struct{ BalanceHistory balanceHistory; local_id current; AllHistory allH
 bank target;
 pid_t pids[MAX_N];
 
-void parent_start(bank* cur);
-void child_start (bank* cur, balance_t init_bal);
-
 #endif

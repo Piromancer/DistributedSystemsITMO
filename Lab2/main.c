@@ -15,6 +15,13 @@
 #include "banking.h"
 
 
+//printf(log, cur_bank->current, getpid(), getppid());
+//fprintf(fp, log, cur_bank->current, getpid(), getppid());
+//sprintf(msg.s_payload, log, c_id, getpid(), getppid());
+//printf(log_received_all_started_fmt, current);
+//fprintf(fp, log_received_all_started_fmt, current);
+
+
 void child_start (bank* cur_bank, balance_t init_bal){
     cur_bank->balanceHistory.s_id = cur_bank->current;
     cur_bank->balanceHistory.s_history_len = 1;
@@ -29,6 +36,9 @@ void child_start (bank* cur_bank, balance_t init_bal){
     msg.s_header.s_payload_len = strlen(msg.s_payload);
 
     //todo log - something like (&message, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance)
+    printf((const char *) &msg, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance);
+    //sprintf((char *) &msg, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance);
+    fprintf(fp, (const char *) &msg, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance);
 
     send_multicast(&target, &msg);
     for (int i = 1; i <= processes_count-1; i++){
@@ -37,6 +47,10 @@ void child_start (bank* cur_bank, balance_t init_bal){
             receive(&target, i, &message);
     }
     //todo log (log_received_all_started_fmt, get_physical_time(), cur_bank->current)
+    printf(log_received_all_started_fmt, get_physical_time(), cur_bank->current);
+    //sprintf((char*) log_received_all_started_fmt, get_physical_time(), cur_bank->current);
+    fprintf(fp, log_received_all_started_fmt, get_physical_time(), cur_bank->current);
+
 
     size_t not_ready = processes_count - 2;
     bool flag = true;
@@ -57,6 +71,9 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 res = -transferOrder->s_amount;
                 send(&target, transferOrder->s_dst, &mesg);
                 //todo log (log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst)
+                printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
+                //sprintf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
+                fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
             } else if (transferOrder->s_dst == cur_bank->current){
                 res = +transferOrder->s_amount;
                 Message ack;
@@ -65,6 +82,8 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 };
                 send(&target, 0, &ack);
                 //todo log (log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src)
+                printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
+                fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
             }
             if (transfer_time >= balanceHistory->s_history_len){
                 balanceHistory->s_history_len = transfer_time + 1;
@@ -89,6 +108,8 @@ void child_start (bank* cur_bank, balance_t init_bal){
     };
     timestamp = get_physical_time();
     //todo log &msg9000, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance)
+    printf((const char *) &msg9000, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
+    fprintf(fp, (const char *) &msg9000, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
 
     msg9000.s_header.s_payload_len = strlen(msg9000.s_payload);
     send_multicast(&target, &msg9000);
@@ -109,6 +130,9 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 res = -transferOrder->s_amount;
                 send(&target, transferOrder->s_dst, &newmsg);
                 //todo log (log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst)
+                printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
+                fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
+
             } else if (transferOrder->s_dst == cur_bank->current){
                 res = +transferOrder->s_amount;
                 Message ack;
@@ -117,6 +141,8 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 };
                 send(&target, PARENT_ID, &ack);
                 //todo log (log_transfer_in_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src)
+                printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
+                fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
             }
             if (transfer_time >= balanceHistory->s_history_len){
                 balanceHistory->s_history_len = transfer_time + 1;
@@ -132,6 +158,8 @@ void child_start (bank* cur_bank, balance_t init_bal){
     }
 
     //todo log (log_received_all_done_fmt, get_physical_time(), cur_bank->current)
+    printf(log_received_all_done_fmt, get_physical_time(), cur_bank->current);
+    fprintf(fp, log_received_all_done_fmt, get_physical_time(), cur_bank->current);
 
     cur_bank->balanceHistory.s_history_len = get_physical_time() + 1;
     int historySize = sizeof(int8_t) /*local_id */ + sizeof(uint8_t) + cur_bank->balanceHistory.s_history_len* sizeof(BalanceState);
@@ -154,6 +182,8 @@ void parent_start(bank* cur_bank){
 
     }
     //todo log_received_all_started_fmt, get_physical_time(), cur_bank->current
+    printf(log_received_all_started_fmt, get_physical_time(), cur_bank->current);
+    fprintf(fp, log_received_all_started_fmt, get_physical_time(), cur_bank->current);
 
     bank_robbery(cur_bank, processes_count - 1);
     Message message = {
@@ -170,6 +200,8 @@ void parent_start(bank* cur_bank){
 
     }
     //todo log_received_all_done_fmt, get_physical_time(), cur_bank->current
+    printf(log_received_all_done_fmt, get_physical_time(), cur_bank->current);
+    fprintf(fp, log_received_all_done_fmt, get_physical_time(), cur_bank->current);
 
     cur_bank->allHistory.s_history_len = processes_count - 1;
     for (int i = 1; i <= processes_count - 1; i++){
@@ -254,8 +286,14 @@ void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
     receive(cur, dst, &msg);
 }
 
-void hist(local_id cur, balance_t balance){
-    ;
+void hist(bank* cur_bank, balance_t balance){
+    cur_bank->balanceHistory.s_id = cur_bank->current;
+    cur_bank->balanceHistory.s_history_len = 1;
+    for (timestamp_t timestamp = 1; timestamp < 255; timestamp++){
+        cur_bank->balanceHistory.s_history[timestamp] = (BalanceState) {
+            .s_balance = balance, .s_balance_pending_in = 0, .s_time = timestamp
+        };
+    }
 }
 
 int main( int argc, char* argv[] ){
@@ -264,13 +302,13 @@ int main( int argc, char* argv[] ){
     fp = fopen("events.log", "w");
     int opt = 0;
     static const char* optString = "p:?";
-    opt = getopt( argc, argv, optString );
-    while( opt != -1 ) {
-        switch( opt ) {
+    opt = getopt(argc, argv, optString);
+    while(opt != -1) {
+        switch(opt) {
             case 'p':
                 children_processes_count = strtoul(optarg, NULL, 10);
                 for (int i = 0; i < children_processes_count; i++){
-                    banks[i] = strtoul(argv[i+3], NULL,10);
+                    banks[i+1] = strtoul(argv[i+3], NULL,10);
                 }
                 break;
             case '?':
@@ -287,8 +325,8 @@ int main( int argc, char* argv[] ){
     //pid_t proc_pids[MAX_N+1];
 
     //pipes
-    for (int src = 0; src < processes_count; src++) {
-        for (int dst = 0; dst < processes_count; dst++) {
+    for (int src = 0; src <= processes_count; src++) {
+        for (int dst = 0; dst <= processes_count; dst++) {
             if (src != dst){
                 int fld[2];
                 pipe(fld);
