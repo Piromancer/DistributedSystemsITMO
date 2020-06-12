@@ -102,13 +102,12 @@ void child_start (bank* cur_bank, balance_t init_bal){
 
                 res = transferOrder->s_amount;
 
-                //todo
                 timestamp_t rec_time = get_lamport_time();
-                for (timestamp_t i = 0; i < rec_time; i++){
+                for (timestamp_t i = transfer_time; i < rec_time; i++){
                     balanceHistory->s_history[i].s_balance_pending_in += res;
                 }
-                for (timestamp_t j = rec_time; j < 256; j++) {
-                    balanceHistory->s_history[j].s_balance += res;
+                for (timestamp_t i = rec_time; i < 256; i++){
+                    balanceHistory->s_history[i].s_balance += res;
                 }
 
 
@@ -196,11 +195,11 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 res = transferOrder->s_amount;
 
                 timestamp_t rec_time = get_lamport_time();
-                for (timestamp_t i = 0; i < rec_time; i++){
+                for (timestamp_t i = transfer_time; i < rec_time; i++){
                     balanceHistory->s_history[i].s_balance_pending_in += res;
                 }
-                for (timestamp_t j = rec_time; j < 256; j++) {
-                    balanceHistory->s_history[j].s_balance += res;
+                for (timestamp_t i = rec_time; i < 256; i++){
+                    balanceHistory->s_history[i].s_balance += res;
                 }
 
 
