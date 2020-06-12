@@ -5,10 +5,10 @@
 #include <stdbool.h>
 
 int send(void* self, local_id dst, const Message* msg){
-        bank* cur = self;
-        write(output[cur->current][dst], &msg->s_header, sizeof(MessageHeader));
-        write(output[cur->current][dst], &msg->s_payload, msg->s_header.s_payload_len);
-        return 0;
+    bank* cur = self;
+    write(output[cur->current][dst], &msg->s_header, sizeof(MessageHeader));
+    write(output[cur->current][dst], &msg->s_payload, msg->s_header.s_payload_len);
+    return 0;
 }
 
 int send_multicast(void* self, const Message* msg){
@@ -27,34 +27,29 @@ int receive(void* self, local_id from, Message* msg){
     unsigned int flags = fcntl(input[from][cur->current], F_GETFL, 0);
     fcntl(input[from][cur->current], F_SETFL, flags && !O_NONBLOCK);
     read(input[from][cur->current], &msg->s_header, sizeof(MessageHeader));
-    fcntl(input[from][cur->current], F_SETFL, flags || !O_NONBLOCK);
-    flags = fcntl(input[from][cur->current], F_GETFL, 0);
-    fcntl(input[from][cur->current], F_SETFL, flags && !O_NONBLOCK);
     read(input[from][cur->current], &msg->s_payload, msg->s_header.s_payload_len);
-    fcntl(input[from][cur->current], F_SETFL, flags || !O_NONBLOCK);
     return 0;
 }
 
 int receive_any(void* self, Message* msg){
     bank *cur = self;
-    int src = cur->current;
+    int from = cur->current;
     while (true) {
-        if (++src == cur->current) src++;
-        if (src >= processes_count) {
-            src -= processes_count;
+        if (++from == cur->current) from++;
+        if (from >= processes_count) {
+            from -= processes_count;
         }
 
-        size_t src_file = input[src][cur->current];
-        unsigned int flags = fcntl(src_file, F_GETFL, 0);
-        fcntl(src_file, F_SETFL, flags | O_NONBLOCK);
-        int num_bytes_read = read(src_file, &msg->s_header, 1);
+        unsigned int flags = fcntl(input[from][cur->current], F_GETFL, 0);
+        fcntl(input[from][cur->current], F_SETFL, flags | O_NONBLOCK);
+        int num_bytes_read = read(input[from][cur->current], &msg->s_header, 1);
         if (num_bytes_read == -1) 
             continue;
 
-        fcntl(src_file, F_SETFL, flags & !O_NONBLOCK);
-        read(src_file, ((char *) &msg->s_header) + 1, sizeof(MessageHeader) - 1);
-        read(src_file, msg->s_payload, msg->s_header.s_payload_len);
-        fcntl(src_file, F_SETFL, flags | O_NONBLOCK);
+        fcntl(input[from][cur->current], F_SETFL, flags & !O_NONBLOCK);
+        read(input[from][cur->current], ((char *) &msg->s_header) + 1, sizeof(MessageHeader) - 1);
+        read(input[from][cur->current], msg->s_payload, msg->s_header.s_payload_len);
+        fcntl(input[from][cur->current], F_SETFL, flags | O_NONBLOCK);
         return 0;
     }
 }
