@@ -26,7 +26,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
         cur_bank->balanceHistory.s_history[timestamp] = (BalanceState) { .s_balance = init_bal, .s_balance_pending_in = 0, .s_time = timestamp };
     }
 
-
     cur_bank->lamp_time++;
 
     Message msg = {
@@ -45,14 +44,15 @@ void child_start (bank* cur_bank, balance_t init_bal){
 
 
 
-    for (int i = 1; i <= processes_count-1; i++){
+    for (int i = 1; i < processes_count; i++){
         Message message;
-        if (i != cur_bank->current)
+        if (i != cur_bank->current){
             receive(&target, i, &message);
-        if (cur_bank->lamp_time < message.s_header.s_local_time){
+            if (cur_bank->lamp_time < message.s_header.s_local_time){
             cur_bank->lamp_time = message.s_header.s_local_time;
+            }
+            cur_bank->lamp_time++;
         }
-        cur_bank->lamp_time++;
     }
     printf(log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
     fprintf(fp, log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
@@ -226,7 +226,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
     cur_bank->lamp_time++;
 
     cur_bank->balanceHistory.s_history_len = get_lamport_time() + 1;
-
+    
     int historySize = sizeof(uint8_t) + sizeof(uint8_t) + cur_bank->balanceHistory.s_history_len* sizeof(BalanceState);
 
     Message result = {
