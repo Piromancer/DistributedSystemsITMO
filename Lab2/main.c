@@ -87,17 +87,17 @@ void child_start (bank* cur_bank, balance_t init_bal){
         }
 
     }
-    Message msg9000 = {
+    msg = (Message) {
             .s_header = {
                     .s_magic = MESSAGE_MAGIC, .s_type = DONE
             }
     };
     timestamp = get_physical_time();
-    printf((const char *) &msg9000, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
-    fprintf(fp, (const char *) &msg9000, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
+    printf((const char *) &msg, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
+    fprintf(fp, (const char *) &msg, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
 
-    msg9000.s_header.s_payload_len = strlen(msg9000.s_payload);
-    send_multicast(&target, &msg9000);
+    msg.s_header.s_payload_len = strlen(msg.s_payload);
+    send_multicast(&target, &msg);
 
     while (not_ready > 0){
         Message newmsg;
@@ -157,8 +157,8 @@ void child_start (bank* cur_bank, balance_t init_bal){
 }
 
 void parent_start(bank* cur_bank){
+    Message msg;
     for (int i = 1; i < processes_count; i++){
-        Message msg;
         if (i != cur_bank->current)
             receive(&target, i, &msg);
 
@@ -175,9 +175,8 @@ void parent_start(bank* cur_bank){
     send_multicast(&target, &message);
 
     for (int i = 1; i <= processes_count - 1; i++){
-        Message msg1;
         if (i != cur_bank->current)
-            receive(&target, i, &msg1);
+            receive(&target, i, &msg);
 
     }
     printf(log_received_all_done_fmt, get_physical_time(), cur_bank->current);
@@ -185,11 +184,10 @@ void parent_start(bank* cur_bank){
 
     cur_bank->allHistory.s_history_len = processes_count - 1;
     for (int i = 1; i <= processes_count - 1; i++){
-        Message msg9k;
-        receive(&target, i, &msg9k);
-        MessageType message_type = msg9k.s_header.s_type;
+        receive(&target, i, &msg);
+        MessageType message_type = msg.s_header.s_type;
         if (message_type == BALANCE_HISTORY){
-            BalanceHistory* childrenHistory = (BalanceHistory*) &msg9k.s_payload;
+            BalanceHistory* childrenHistory = (BalanceHistory*) &msg.s_payload;
             cur_bank->allHistory.s_history[i-1] = *childrenHistory;
         }
     }
@@ -198,11 +196,7 @@ void parent_start(bank* cur_bank){
         waitpid(pids[i], NULL, 0);
     }
     print_history(&cur_bank->allHistory);
-
-
 }
-
-
 
 void close_unused_pipes(){
     bank* cur_bank = &target;
@@ -238,16 +232,6 @@ void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
         send(cur, src, &msg);
     }
     receive(cur, dst, &msg);
-}
-
-void hist(bank* cur_bank, balance_t balance){
-    cur_bank->balanceHistory.s_id = cur_bank->current;
-    cur_bank->balanceHistory.s_history_len = 1;
-    for (timestamp_t timestamp = 1; timestamp < 255; timestamp++){
-        cur_bank->balanceHistory.s_history[timestamp] = (BalanceState) {
-            .s_balance = balance, .s_balance_pending_in = 0, .s_time = timestamp
-        };
-    }
 }
 
 int main( int argc, char* argv[] ){
