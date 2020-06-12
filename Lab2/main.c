@@ -284,7 +284,7 @@ int main( int argc, char* argv[] ){
                 pipe(fld);
                 for (int k = 0; k <= 1; k++){
                     unsigned int flags = fcntl( fld[src], F_GETFL, 0);
-                    fcntl( fld[k], F_SETFL, flags || (bool) O_NONBLOCK);
+                    fcntl(fld[k], F_SETFL, flags | O_NONBLOCK);
                 }
                 input[src][dst] = fld[0];
                 output[src][dst] = fld[1];
