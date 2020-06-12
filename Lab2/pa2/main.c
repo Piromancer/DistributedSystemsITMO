@@ -260,8 +260,8 @@ int main( int argc, char* argv[] ){
     processes_count = children_processes_count + 1;
 
     //pipes
-    for (int src = 0; src <= processes_count; src++) {
-        for (int dst = 0; dst <= processes_count; dst++) {
+    for (int src = 0; src < processes_count; src++) {
+        for (int dst = 0; dst < processes_count; dst++) {
             if (src != dst){
                 int fld[2];
                 pipe(fld);
@@ -274,8 +274,6 @@ int main( int argc, char* argv[] ){
             }
         }
     }
-
-    close_unused_pipes();
     pids[PARENT_ID] = getpid();
     // create porcessess
     for (int id = 1; id <= children_processes_count; id++) {
@@ -293,6 +291,7 @@ int main( int argc, char* argv[] ){
         }
 
     }
+    close_unused_pipes();
 
 
     if (cur_bank->current == PARENT_ID) {
