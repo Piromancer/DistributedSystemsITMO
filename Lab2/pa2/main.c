@@ -236,7 +236,7 @@ void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
 int main( int argc, char* argv[] ){
     bank* cur_bank = &target;
     unsigned int children_processes_count;
-    fp = fopen("events.log", "w");
+    fp = fopen("events.log", "a");
     int opt = 0;
     static const char* optString = "p:?";
     opt = getopt(argc, argv, optString);
@@ -266,7 +266,7 @@ int main( int argc, char* argv[] ){
                 int fld[2];
                 pipe(fld);
                 for (int k = 0; k <= 1; k++){
-                    unsigned int flags = fcntl( fld[src], F_GETFL, 0);
+                    unsigned int flags = fcntl(fld[k], F_GETFL);
                     fcntl(fld[k], F_SETFL, flags | O_NONBLOCK);
                 }
                 input[src][dst] = fld[0];

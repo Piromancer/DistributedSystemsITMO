@@ -24,14 +24,11 @@ int send_multicast(void* self, const Message* msg){
 
 int receive(void* self, local_id from, Message* msg){
     bank* cur = self;
-    unsigned int flags = fcntl(input[from][cur->current], F_GETFL, 0);
+    unsigned int flags = fcntl(input[from][cur->current], F_GETFL);
     fcntl(input[from][cur->current], F_SETFL, flags && !O_NONBLOCK);
     read(input[from][cur->current], &msg->s_header, sizeof(MessageHeader));
-    fcntl(input[from][cur->current], F_SETFL, flags || !O_NONBLOCK);
-    flags = fcntl(input[from][cur->current], F_GETFL, 0);
-    fcntl(input[from][cur->current], F_SETFL, flags && !O_NONBLOCK);
     read(input[from][cur->current], &msg->s_payload, msg->s_header.s_payload_len);
-    fcntl(input[from][cur->current], F_SETFL, flags || !O_NONBLOCK);
+    fcntl(input[from][cur->current], F_SETFL, flags | O_NONBLOCK);
     return 0;
 }
 
