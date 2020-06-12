@@ -6,7 +6,6 @@
 
 int send(void* self, local_id dst, const Message* msg){
         bank* cur = self;
-        cur->lamp_time++;
         //write(output[cur->current][dst], &msg->s_header, sizeof(MessageHeader));
         //write(output[cur->current][dst], &msg->s_payload, msg->s_header.s_payload_len);
         write(output[cur->current][dst], msg, msg->s_header.s_payload_len + sizeof(MessageHeader));

@@ -26,9 +26,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
         cur_bank->balanceHistory.s_history[timestamp] = (BalanceState) { .s_balance = init_bal, .s_balance_pending_in = 0, .s_time = timestamp };
     }
 
-
-    cur_bank->lamp_time++;
-
     Message msg = {
             .s_header =
                     { .s_magic = MESSAGE_MAGIC, .s_type = STARTED, .s_local_time = get_lamport_time()
@@ -51,7 +48,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
             receive(&target, i, &message);
         if (cur_bank->lamp_time < message.s_header.s_local_time){
             cur_bank->lamp_time = message.s_header.s_local_time;
-            cur_bank->lamp_time++;
         }
     }
     printf(log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
@@ -66,7 +62,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
         if (cur_bank->lamp_time < msg.s_header.s_local_time){
             cur_bank->lamp_time = msg.s_header.s_local_time;
         }
-        cur_bank->lamp_time++;
 
         MessageType messageType = msg.s_header.s_type;
 
@@ -81,7 +76,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 if (cur_bank->lamp_time < transfer_time){
                     cur_bank->lamp_time = transfer_time;
                 }
-                cur_bank->lamp_time++;
                 timestamp_t sendTime = get_lamport_time();
                 for (timestamp_t i = sendTime; i < 256; i++){
                     balanceHistory->s_history[i].s_balance -= transferOrder->s_amount;
@@ -98,14 +92,10 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 if (cur_bank->lamp_time < transfer_time){
                     cur_bank->lamp_time = transfer_time;
                 }
-                cur_bank->lamp_time++;
 
                 res = +transferOrder->s_amount;
 
                 timestamp_t rec_time = get_lamport_time();
-                for (timestamp_t i = 0; i < rec_time; i++){
-                    balanceHistory->s_history[i].s_balance_pending_in += res;
-                }
                 for (timestamp_t j = rec_time; j < 256; j++) {
                     balanceHistory->s_history[j].s_balance += res;
                 }
@@ -134,7 +124,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
         }
 
     }
-    cur_bank->lamp_time++;
     msg = (Message) {
             .s_header = {
                     .s_magic = MESSAGE_MAGIC, .s_type = DONE, .s_local_time = get_lamport_time()
@@ -154,7 +143,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
         if (cur_bank->lamp_time < newmsg.s_header.s_local_time){
             cur_bank->lamp_time = newmsg.s_header.s_local_time;
         }
-        cur_bank->lamp_time++;
 
         MessageType messageType = newmsg.s_header.s_type;
 
@@ -171,7 +159,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 if (cur_bank->lamp_time < transfer_time){
                     cur_bank->lamp_time = transfer_time;
                 }
-                cur_bank->lamp_time++;
 
                 timestamp_t send_time = get_lamport_time();
 
@@ -187,7 +174,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 if (cur_bank->lamp_time < transfer_time){
                     cur_bank->lamp_time = transfer_time;
                 }
-                cur_bank->lamp_time++;
 
 
                 res = +transferOrder->s_amount;
@@ -221,7 +207,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
 
     printf(log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
     fprintf(fp, log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
-    cur_bank->lamp_time++;
 
     cur_bank->balanceHistory.s_history_len = get_lamport_time() + 1;
 
@@ -244,7 +229,6 @@ void parent_start(bank* cur_bank){
             receive(&target, i, &msg);
             if (cur_bank->lamp_time < msg.s_header.s_local_time){
                 cur_bank->lamp_time = msg.s_header.s_local_time;
-                cur_bank->lamp_time++;
             }
         }
     }
@@ -264,7 +248,6 @@ void parent_start(bank* cur_bank){
             receive(&target, i, &msg);
             if (cur_bank->lamp_time < msg.s_header.s_local_time) {
                 cur_bank->lamp_time = msg.s_header.s_local_time;
-                cur_bank->lamp_time++;
             }
         }
     }
@@ -280,7 +263,6 @@ void parent_start(bank* cur_bank){
             cur_bank->allHistory.s_history[i-1] =* childrenHistory;
             if (cur_bank->lamp_time < message.s_header.s_local_time){
                 cur_bank->lamp_time = message.s_header.s_local_time;
-                cur_bank->lamp_time++;
             }
         }
     }
@@ -331,7 +313,6 @@ void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
     if (msg.s_header.s_type == ACK){
         if (cur->lamp_time < msg.s_header.s_local_time){
             cur->lamp_time = msg.s_header.s_local_time;
-            cur->lamp_time++;
         }
     }
 }
