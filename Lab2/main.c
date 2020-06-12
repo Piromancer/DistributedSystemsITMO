@@ -15,13 +15,6 @@
 #include "banking.h"
 
 
-//printf(log, cur_bank->current, getpid(), getppid());
-//fprintf(fp, log, cur_bank->current, getpid(), getppid());
-//sprintf(msg.s_payload, log, c_id, getpid(), getppid());
-//printf(log_received_all_started_fmt, current);
-//fprintf(fp, log_received_all_started_fmt, current);
-
-
 void child_start (bank* cur_bank, balance_t init_bal){
     cur_bank->balanceHistory.s_id = cur_bank->current;
     cur_bank->balanceHistory.s_history_len = 1;
@@ -35,9 +28,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
     timestamp_t timestamp = get_physical_time();
     msg.s_header.s_payload_len = strlen(msg.s_payload);
 
-    //todo log - something like (&message, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance)
     printf((const char *) &msg, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance);
-    //sprintf((char *) &msg, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance);
     fprintf(fp, (const char *) &msg, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance);
 
     send_multicast(&target, &msg);
@@ -46,9 +37,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
         if (i != cur_bank->current)
             receive(&target, i, &message);
     }
-    //todo log (log_received_all_started_fmt, get_physical_time(), cur_bank->current)
     printf(log_received_all_started_fmt, get_physical_time(), cur_bank->current);
-    //sprintf((char*) log_received_all_started_fmt, get_physical_time(), cur_bank->current);
     fprintf(fp, log_received_all_started_fmt, get_physical_time(), cur_bank->current);
 
 
@@ -70,9 +59,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
             if (transferOrder->s_src == cur_bank->current){
                 res = -transferOrder->s_amount;
                 send(&target, transferOrder->s_dst, &mesg);
-                //todo log (log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst)
                 printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
-                //sprintf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
                 fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
             } else if (transferOrder->s_dst == cur_bank->current){
                 res = +transferOrder->s_amount;
@@ -81,7 +68,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
                     .s_magic = MESSAGE_MAGIC, .s_type = ACK, .s_local_time = transfer_time, .s_payload_len = 0
                 };
                 send(&target, 0, &ack);
-                //todo log (log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src)
                 printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
                 fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src);
             }
@@ -107,7 +93,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
             }
     };
     timestamp = get_physical_time();
-    //todo log &msg9000, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance)
     printf((const char *) &msg9000, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
     fprintf(fp, (const char *) &msg9000, log_done_fmt, timestamp, cur_bank->current, cur_bank->balanceHistory.s_history[timestamp].s_balance);
 
@@ -129,7 +114,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
             if (transferOrder->s_src == cur_bank->current){
                 res = -transferOrder->s_amount;
                 send(&target, transferOrder->s_dst, &newmsg);
-                //todo log (log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst)
                 printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
                 fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
 
@@ -140,7 +124,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
                         .s_magic = MESSAGE_MAGIC, .s_type = ACK, .s_local_time = transfer_time, .s_payload_len = 0
                 };
                 send(&target, PARENT_ID, &ack);
-                //todo log (log_transfer_in_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_src)
                 printf(log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
                 fprintf(fp, log_transfer_out_fmt, get_physical_time(), cur_bank->current, transferOrder->s_amount, transferOrder->s_dst);
             }
@@ -157,7 +140,6 @@ void child_start (bank* cur_bank, balance_t init_bal){
         }
     }
 
-    //todo log (log_received_all_done_fmt, get_physical_time(), cur_bank->current)
     printf(log_received_all_done_fmt, get_physical_time(), cur_bank->current);
     fprintf(fp, log_received_all_done_fmt, get_physical_time(), cur_bank->current);
 
@@ -181,7 +163,6 @@ void parent_start(bank* cur_bank){
             receive(&target, i, &msg);
 
     }
-    //todo log_received_all_started_fmt, get_physical_time(), cur_bank->current
     printf(log_received_all_started_fmt, get_physical_time(), cur_bank->current);
     fprintf(fp, log_received_all_started_fmt, get_physical_time(), cur_bank->current);
 
@@ -199,7 +180,6 @@ void parent_start(bank* cur_bank){
             receive(&target, i, &msg1);
 
     }
-    //todo log_received_all_done_fmt, get_physical_time(), cur_bank->current
     printf(log_received_all_done_fmt, get_physical_time(), cur_bank->current);
     fprintf(fp, log_received_all_done_fmt, get_physical_time(), cur_bank->current);
 
@@ -247,31 +227,6 @@ void display_usage(){
     puts( "-p X Y..Y, where X - number of processes 0..10, Y - start balance for each process" );
 }
 
-/*
-//send_msg
-void send_msg(local_id c_id, int16_t type, const char* const log) {
-    bank* cur_bank = &target;
-    if (c_id != PARENT_ID){
-        Message msg = { .s_header = { .s_magic = MESSAGE_MAGIC, .s_type = type, }, };
-        printf(log, cur_bank->current, getpid(), getppid());
-        fprintf(fp, log, cur_bank->current, getpid(), getppid());
-        sprintf(msg.s_payload, log, c_id, getpid(), getppid());
-        msg.s_header.s_payload_len = strlen(msg.s_payload);
-        send_multicast(NULL, &msg);
-    }
-}
-
-//receive_msg
-void receive_msg(local_id c_id, unsigned int child_processes_count){
-    for (int i = 1; i <= child_processes_count; i++){
-        Message msg;
-        if (i != c_id){
-            receive(NULL, i, &msg);
-        }
-    }
-}*/
-
-
 void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
 {
     local_id* cur = parent_data;
@@ -282,7 +237,6 @@ void transfer(void* parent_data, local_id src, local_id dst, balance_t amount)
         memcpy(&msg.s_payload, &order, sizeof(TransferOrder));
         send(cur, src, &msg);
     }
-    //receive proof
     receive(cur, dst, &msg);
 }
 
@@ -322,8 +276,6 @@ int main( int argc, char* argv[] ){
     }
     processes_count = children_processes_count + 1;
 
-    //pid_t proc_pids[MAX_N+1];
-
     //pipes
     for (int src = 0; src <= processes_count; src++) {
         for (int dst = 0; dst <= processes_count; dst++) {
@@ -359,15 +311,6 @@ int main( int argc, char* argv[] ){
 
     }
     close_unused_pipes();
-
-
-
-    /*send_msg(current, STARTED, log_started_fmt);
-    receive_msg(current, children_processes_count);
-    printf(log_received_all_started_fmt, current);
-    fprintf(fp, log_received_all_started_fmt, current);
-    send_msg(current, DONE, log_done_fmt);
-    printf(log_received_all_done_fmt, current);*/
 
     if (cur_bank->current == PARENT_ID) {
         parent_start(cur_bank);
