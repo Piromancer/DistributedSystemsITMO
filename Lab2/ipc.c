@@ -36,16 +36,39 @@ int receive(void* self, local_id from, Message* msg){
 }
 
 int receive_any(void* self, Message* msg){
-    bank* cur = (bank*) self;
-    unsigned int from = cur->current;
-    while (true){
-        if (++from == cur->current) from++;
-        if (from >= processes_count) from = from - processes_count;
-        unsigned int flags = fcntl(input[from][cur->current], F_GETFL, 0);
-        fcntl(input[from][cur->current], F_SETFL, flags && !O_NONBLOCK);
-        read(input[from][cur->current], ((char*) &msg->s_header) + 1, sizeof(MessageHeader) - 1);
-        read(input[from][cur->current], msg->s_payload, msg->s_header.s_payload_len);
-        fcntl(input[from][cur->current], F_SETFL, flags || !O_NONBLOCK);
+    bank *cur = self;
+    int src = cur->current;
+    while (true) {
+        if (++src == cur->current) src++;
+        if (src >= processes_count) {
+            src -= processes_count;
+        }
+
+        size_t src_file = input[src][cur->current];
+        unsigned int flags = fcntl(src_file, F_GETFL, 0);
+        fcntl(src_file, F_SETFL, flags | O_NONBLOCK);
+        int num_bytes_read = read(src_file, &msg->s_header, 1);
+        switch (num_bytes_read) {
+            case -1:
+                // Would block, go to next
+                continue;
+                break;
+            case 0: {
+                // EOF reached
+                continue;
+                break;
+            }
+            default:
+                // One byte read, continue reading
+                break;
+        }
+
+        fcntl(src_file, F_SETFL, flags & !O_NONBLOCK);
+
+        read(src_file, ((char *) &msg->s_header) + 1, sizeof(MessageHeader) - 1);
+        read(src_file, msg->s_payload, msg->s_header.s_payload_len);
+
+        fcntl(src_file, F_SETFL, flags | O_NONBLOCK);
         return 0;
     }
 }
