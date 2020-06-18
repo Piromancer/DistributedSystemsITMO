@@ -5,12 +5,11 @@
 #include <stdbool.h>
 
 int send(void* self, local_id dst, const Message* msg){
-        bank* cur = self;
-        //write(output[cur->current][dst], &msg->s_header, sizeof(MessageHeader));
-        //write(output[cur->current][dst], &msg->s_payload, msg->s_header.s_payload_len);
-        cur->lamp_time++;
-        write(output[cur->current][dst], msg, msg->s_header.s_payload_len + sizeof(MessageHeader));
-        return 0;
+    bank* cur = self;
+    cur->lamp_time++;
+    write(output[cur->current][dst], &msg->s_header, sizeof(MessageHeader));
+    write(output[cur->current][dst], &msg->s_payload, msg->s_header.s_payload_len);
+    return 0;
 }
 
 int send_multicast(void* self, const Message* msg){
@@ -26,12 +25,9 @@ int send_multicast(void* self, const Message* msg){
 
 int receive(void* self, local_id from, Message* msg){
     bank* cur = self;
-    unsigned int flags = fcntl(input[from][cur->current], F_GETFL, 0);
+    unsigned int flags = fcntl(input[from][cur->current], F_GETFL);
     fcntl(input[from][cur->current], F_SETFL, flags && !O_NONBLOCK);
     read(input[from][cur->current], &msg->s_header, sizeof(MessageHeader));
-    fcntl(input[from][cur->current], F_SETFL, flags | O_NONBLOCK);
-    flags = fcntl(input[from][cur->current], F_GETFL, 0);
-    fcntl(input[from][cur->current], F_SETFL, flags && !O_NONBLOCK);
     read(input[from][cur->current], &msg->s_payload, msg->s_header.s_payload_len);
     fcntl(input[from][cur->current], F_SETFL, flags | O_NONBLOCK);
     return 0;
