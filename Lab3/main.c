@@ -177,7 +177,7 @@ void child_start (bank* cur_bank, balance_t init_bal){
                 timestamp_t send_time = get_lamport_time();
 
                 for (timestamp_t i = send_time; i < 256; i++){
-                    balanceHistory->s_history->s_balance -= transferOrder->s_amount;
+                    balanceHistory->s_history[i]->s_balance -= transferOrder->s_amount;
                 }
                 newmsg.s_header.s_local_time = send_time;
                 send(&target, transferOrder->s_dst, &newmsg);
