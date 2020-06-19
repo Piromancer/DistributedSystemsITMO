@@ -150,7 +150,7 @@ int wait_queue(){
 }
 
 
-int request_cs(){
+int request_cs(const void * self){
     bank* cur_bank = &target;
     Message msg;
     cur_bank->lamp_time++;
@@ -170,7 +170,7 @@ int request_cs(){
 
 
 
-int release_cs(){
+int release_cs(const void * self){
     bank* cur = &target;
     Message msg;
     cur->lamp_time++;
