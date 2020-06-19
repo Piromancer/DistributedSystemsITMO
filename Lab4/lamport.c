@@ -1,4 +1,4 @@
-#include <stdio.h>
+/*#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -80,7 +80,7 @@ int wait_queue(){
     int running_processes = processes_count - 1;
     while (running_processes > 0){
         Message msg;
-        receive_any(NULL, msg);
+        //receive_any(NULL, msg);
         set_time(msg.s_header.s_local_time);
         switch (msg.s_header.s_type){
             case CS_REQUEST: {
@@ -172,4 +172,4 @@ int release_cs(){
     
     send_multicast(NULL, &msg);
     return 0;
-}
+}*/
