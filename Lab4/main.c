@@ -30,12 +30,17 @@ void close_unused_pipes() {
     }
 }
 
+timestamp_t get_lamport_time(){
+    return target.lamp_time;
+}
+
 
 void display_usage(){
     puts( "-p X, where X - number of processes 0..10" );
 }
 
 int main( int argc, char* argv[] ){
+    bank* cur_bank = &target;
     unsigned int children_processes_count;
     //int mutexl = 1;
     fp = fopen("events.log", "w");
@@ -88,10 +93,10 @@ int main( int argc, char* argv[] ){
         int child_pid = fork();
         if (child_pid != -1) {
             if (child_pid == 0) {
-                current = id;
+                cur_bank->current = id;
                 break;
             } else {
-                current = PARENT_ID;
+                cur_bank->current = PARENT_ID;
             }
         } else {
             puts("Can't create process!\n");
@@ -100,29 +105,29 @@ int main( int argc, char* argv[] ){
     }
     close_unused_pipes();
 
-    send_msg(current, STARTED, log_started_fmt);
+    /*send_msg(current, STARTED, log_started_fmt);
     receive_msg(current, children_processes_count);
     printf(log_received_all_started_fmt, current);
-
+    */
 
     //output loop
     char str[128];
-    int num_prints = current * 5;
+    int num_prints = cur_bank->current * 5;
 
     for (int i = 1; i <= num_prints; ++i) {
         memset(str, 0, sizeof(str));
-        sprintf(str, log_loop_operation_fmt, current, i, num_prints);
+        sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
         print(str);
     }
 
 
-    pthread_mutex_lock (&fp);
-    fprintf(fp, log_received_all_started_fmt, current);
-    pthread_mutex_unlock (&fp);
-    send_msg(current, DONE, log_done_fmt);
-    printf(log_received_all_done_fmt, current);
+    //pthread_mutex_lock (&fp);
+    //fprintf(fp, log_received_all_started_fmt, cur_bank->current);
+    //pthread_mutex_unlock (&fp);
+    //send_msg(current, DONE, log_done_fmt);
+    //printf(log_received_all_done_fmt, cur_bank->current);
 
-    if (current == PARENT_ID) {
+    if (cur_bank->current == PARENT_ID) {
         for (int i = 1; i <= processes_count; i++) {
             waitpid(proc_pids[i], NULL, 0);
         }
