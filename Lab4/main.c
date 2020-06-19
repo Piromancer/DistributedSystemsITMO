@@ -128,8 +128,22 @@ int main( int argc, char* argv[] ){
 
     for (int i = 1; i <= num_prints; ++i) {
         memset(str, 0, sizeof(str));
-        sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-        print(str);
+        /*if (mutexl_flag){
+            puts("AOAOAOOAOAOAOAOAOAOAOO YES");
+        } else puts ("YAYAYAYAYAYAY NO");*/
+        if (mutexl_flag){
+
+            sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+            //request_cs(cur_bank);
+            print(str);
+            //release_cs(cur_bank);
+            print("YEP");
+        } else {
+            sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+            print(str);
+            //print("NOPE");
+        }
+
     }
 
 

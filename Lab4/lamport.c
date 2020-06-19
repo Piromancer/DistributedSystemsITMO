@@ -67,7 +67,7 @@ int wait_queue(){
     int running_processes = processes_count - 1;
     while (running_processes > 0){
         Message msg;
-        //receive_any(NULL, msg);
+        receive_any(NULL, &msg);
         if (cur_bank->lamp_time < msg.s_header.s_local_time){
             cur_bank->lamp_time = msg.s_header.s_local_time;
         }
@@ -84,8 +84,18 @@ int wait_queue(){
 
                     for (int i = 1; i <= num_prints; ++i) {
                         memset(str, 0, sizeof(str));
-                        sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                        print(str);
+                        if (mutexl_flag){
+                            sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+                            request_cs(cur_bank);
+                            print(str);
+                            release_cs(cur_bank);
+                            print("yep");
+
+                        } else {
+                            sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+                            print(str);
+                            print("nope");
+                        }
                     }
                     Message message;
 
