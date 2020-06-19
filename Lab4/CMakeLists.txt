@@ -5,7 +5,6 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -L/mnt/d/CLionProjects/DSI/Lab4/lib64 -Wl,-r
 
 add_executable(peer4
         banking.h
-        clock.c
         common.h
         io.h
         ipc.c

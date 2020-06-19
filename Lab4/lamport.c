@@ -1,4 +1,4 @@
-/*#include <stdio.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -50,38 +50,28 @@ node_t removeData() {
 }
 
 
-int insert_into_queue(){
+void insert_into_queue(){
+    bank* bank1 = &target;
     node_t *node = (node_t*)malloc(sizeof(node_t));
     node->next = NULL;
-    node->id = current;
-    node->time = get_time();
+    node->id = bank1->current;
+    node->time = get_lamport_time();
     insert(*node);
 }
 
-int request_cs(){
-    Message msg;
-    increase_time();
 
-    msg.s_header = (MessageHeader) {
-        .s_magic = MESSAGE_MAGIC,
-        .s_type  = CS_REQUEST,
-        .s_local_time = get_time(),
-        .s_payload_len = 0
-    };
-
-    send_multicast(NULL, &msg);
-    insert_into_queue();
-    wait_queue();
-    return 0;
-}
 
 int wait_queue(){
+    bank* cur_bank = &target;
     int wait_reply = processes_count - 1;
     int running_processes = processes_count - 1;
     while (running_processes > 0){
         Message msg;
         //receive_any(NULL, msg);
-        set_time(msg.s_header.s_local_time);
+        if (cur_bank->lamp_time < msg.s_header.s_local_time){
+            cur_bank->lamp_time = msg.s_header.s_local_time;
+        }
+        cur_bank->lamp_time++;
         switch (msg.s_header.s_type){
             case CS_REQUEST: {
                 break;
@@ -90,29 +80,29 @@ int wait_queue(){
                 wait_reply--;
                 if (wait_reply == 0){
                     char str[128];
-                    int num_prints = current * 5;
+                    int num_prints = cur_bank->current * 5;
 
                     for (int i = 1; i <= num_prints; ++i) {
                         memset(str, 0, sizeof(str));
-                        sprintf(str, log_loop_operation_fmt, current, i, num_prints);
+                        sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
                         print(str);
                     }
                     Message message;
 
-                    increase_time();
+                    cur_bank->lamp_time++;
                     message.s_header = (MessageHeader) {
                         .s_magic = MESSAGE_MAGIC,
                         .s_type  = CS_RELEASE,
-                        .s_local_time = get_time(),
+                        .s_local_time = get_lamport_time(),
                         .s_payload_len = 0
                     };
                     send_multicast(NULL, &message);
 
-                    increase_time();
+                    cur_bank->lamp_time++;
                     message.s_header = (MessageHeader) {
                         .s_magic = MESSAGE_MAGIC,
                         .s_type  = DONE,
-                        .s_local_time = get_time(),
+                        .s_local_time = get_lamport_time(),
                         .s_payload_len = 0
                     };
                 }
@@ -159,17 +149,39 @@ int wait_queue(){
     return 0;
 }
 
-int release_cs(){
+
+int request_cs(){
+    bank* cur_bank = &target;
     Message msg;
-    increase_time();
+    cur_bank->lamp_time++;
+
+    msg.s_header = (MessageHeader) {
+            .s_magic = MESSAGE_MAGIC,
+            .s_type  = CS_REQUEST,
+            .s_local_time = get_lamport_time(),
+            .s_payload_len = 0
+    };
+    send_multicast(NULL, &msg);
+    insert_into_queue();
+    wait_queue();
+    return 0;
+}
+
+
+
+
+int release_cs(){
+    bank* cur = &target;
+    Message msg;
+    cur->lamp_time++;
     
     msg.s_header = (MessageHeader) {
         .s_magic = MESSAGE_MAGIC,
         .s_type  = CS_RELEASE,
-        .s_local_time = get_time(),
+        .s_local_time = get_lamport_time(),
         .s_payload_len = 0
     };
     
     send_multicast(NULL, &msg);
     return 0;
-}*/
+}

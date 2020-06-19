@@ -12,6 +12,10 @@
 #include "ipc.h"
 #include "pa2345.h"
 
+
+
+
+
 void close_unused_pipes() {
     bank* cur = &target;
     for (unsigned int src = 0; src < processes_count; src++) {
@@ -39,18 +43,25 @@ void display_usage(){
     puts( "-p X, where X - number of processes 0..10" );
 }
 
+
 int main( int argc, char* argv[] ){
+    mutexl_flag = 0;
     bank* cur_bank = &target;
     unsigned int children_processes_count;
     //int mutexl = 1;
     fp = fopen("events.log", "w");
     int opt = 0;
-    static const char* optString = "p:?";
+    static const char* optString = "p:?:";
     int option_index = 0;
-    opt = getopt_long( argc, argv, optString, long_options, &option_index );
-    while( opt != -1 ) {
-        switch( opt ) {
-            case '0':
+    static struct option long_option[] = {
+            {"proc", required_argument, 0, 'p'},
+            {"mutexl", no_argument, &mutexl_flag, 1},
+            {NULL, 0, 0, 0}
+    };
+    opt = getopt_long(argc, argv, optString, long_option, &option_index);
+    while(opt != -1) {
+        switch(opt) {
+            case 0:
                 puts("flag mutexl set");
                 printf("%d", mutexl_flag);
                 break;
@@ -61,9 +72,10 @@ int main( int argc, char* argv[] ){
                 display_usage();
                 return 1;
             default:
+                puts("mda");
                 return 1;
         }
-        opt = getopt_long( argc, argv, optString, long_options, &option_index );
+        opt = getopt_long( argc, argv, optString, long_option, &option_index );
     }
     processes_count = children_processes_count + 1;
 

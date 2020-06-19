@@ -18,11 +18,7 @@ typedef struct{ BalanceHistory balanceHistory; local_id current; AllHistory allH
 bank target;
 pid_t pids[MAX_N];
 
-int mutexl_flag = 0;
-static struct option long_options[] = {
-        {"proc", required_argument, 0, 'p'},
-        {"mutexl", no_argument, &mutexl_flag, 1},
-        {NULL, 0, 0, 0}
-    };
+int mutexl_flag;
+
 
 #endif
