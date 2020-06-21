@@ -46,14 +46,19 @@ void pop(Node** head)
     free(temp); 
 } 
   
-// void print_queue(Node** head)
-// {
-//     printf("Process %d with prio %d | ", (*head)->data, (*head)->priority);
-//     if((*head)->next == NULL) 
-//         printf("\n");
-//         return;
-//     print_queue(&((*head)->next));
-// }
+void print_queue(Node** head)
+{
+    char res[4096] = "------------------------------------------\n";
+    Node* nd = *head;
+    while(nd != NULL){
+        char tmp[256];
+        sprintf(tmp, "Process %d with prio %d\n", nd->data, nd->priority);
+        strcat(res, tmp);
+        nd = nd->next;
+    }
+    strcat(res, "------------------------------------------\n");
+    printf("%s", res);
+}
 
 // Function to push according to priority 
 void push(Node** head, int d, int p) 
@@ -61,7 +66,7 @@ void push(Node** head, int d, int p)
     Node* start = (*head); 
   
     Node* temp = newNode(d, p); 
-    if ((*head)->priority > p) { 
+    if ((*head)->data > d) { 
         temp->next = *head; 
         (*head) = temp; 
     } 
@@ -70,7 +75,7 @@ void push(Node** head, int d, int p)
         // Traverse the list and find a 
         // position to insert new node 
         while (start->next != NULL && 
-               start->next->priority < p) { 
+               start->next->data < d) { 
             start = start->next; 
         }
   
@@ -96,8 +101,9 @@ int wait_queue(){
     Message msg;
 
     while (running_processes > 0){
-        printf("%d with priority %d is next, current proccess is %d\n", peek(&cur_bank->queue), peekPrio(&cur_bank->queue), cur_bank->current);
+        //printf("%d with priority %d is next, current proccess is %d\n", peek(&cur_bank->queue), peekPrio(&cur_bank->queue), cur_bank->current);
         if(wait_reply == 0 && peek(&cur_bank->queue) == cur_bank->current){
+            print_queue(&cur_bank->queue);
             int num_prints = cur_bank->current * 5;
             char str[256];
             for (int i = 1; i <= num_prints; ++i) {
@@ -116,7 +122,6 @@ int wait_queue(){
         switch(msg.s_header.s_type){
             case CS_REQUEST:
                 push(&cur_bank->queue, id, msg.s_header.s_local_time);
-                printf("Pushed %d with prio %d in time %d", id, msg.s_header.s_local_time, get_lamport_time());
                 cur_bank->lamp_time++;
                 msg = (Message) {
                     .s_header = {
@@ -131,7 +136,6 @@ int wait_queue(){
                 break;
             case CS_REPLY:
                 wait_reply--;
-                printf("Now wait_reply is %d\n", wait_reply);
                 break;
             case CS_RELEASE:
                 pop(&cur_bank->queue);
