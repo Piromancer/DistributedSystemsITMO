@@ -82,7 +82,7 @@ int receive_any(void * self, Message * msg) {
             do {
                 nread = read(input[from][cur->current], &msg->s_payload, msg->s_header.s_payload_len);
             } while (nread == -1);
-            return 0;
+            return cur->current;
         }
     }
 }
