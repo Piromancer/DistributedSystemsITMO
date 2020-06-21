@@ -109,7 +109,6 @@ int wait_queue(){
                 send(cur_bank, id-1, &msg);
                 break;
             case CS_REPLY:
-                puts("CS_REPLY");
                 wait_reply--;
                 printf("Current wait reply is %d\n", wait_reply);
                 if(wait_reply == 0){
@@ -137,7 +136,6 @@ int wait_queue(){
 
 
 int request_cs(const void * self){
-    printf("ENTERED REQUEST CS\n");
     bank* cur_bank = (bank*) self;
 
     cur_bank->lamp_time++;
