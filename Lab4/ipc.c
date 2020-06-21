@@ -5,34 +5,6 @@
 #include <fcntl.h>
 #include <stdbool.h>
 
-/*
-//send_msg
-void send_msg(local_id c_id, int16_t type, const char* const log) {
-    if (c_id != PARENT_ID){
-        Message msg = { .s_header = { .s_magic = MESSAGE_MAGIC, .s_type = type, }, };
-        printf(log, current, getpid(), getppid());
-        pthread_mutex_lock (&fp);
-        fprintf(fp, log, current, getpid(), getppid());
-        pthread_mutex_unlock (&fp);
-        sprintf(msg.s_payload, log, c_id, getpid(), getppid());
-        msg.s_header.s_payload_len = strlen(msg.s_payload);
-        send_multicast(NULL, &msg);
-    }
-}
-
-//receive_msg
-void receive_msg(local_id c_id, unsigned int child_processes_count){
-    for (int i = 1; i <= child_processes_count; i++){
-        Message msg;
-        if (i != c_id){
-            receive(NULL, i, &msg);
-        }
-    }
-}*/
-
-
-
-
 int send(void* self, local_id dst, const Message* msg){
         bank* cur = self;
         cur->lamp_time++;
@@ -45,10 +17,6 @@ int send_multicast(void* self, const Message* msg){
     for(local_id dst=0;dst<processes_count;dst++){
         if (dst != cur_bank->current) {
             send(cur_bank, dst, msg);
-            /*if (trans > 0) {
-                return trans;
-            }*/
-           // print("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
         }
     }
     return 0;
@@ -79,7 +47,7 @@ int receive_any(void * self, Message * msg) {
             do {
                 nread = read(input[from][cur->current], &msg->s_payload, msg->s_header.s_payload_len);
             } while (nread == -1);
-            return cur->current;
+            return from;
         }
     }
 }

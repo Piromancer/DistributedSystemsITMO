@@ -87,7 +87,7 @@ int wait_queue(){
     int running_processes = processes_count - 1;
     Message msg;
 
-    while (true){
+    while (running_processes > 0){
         if(wait_reply == 0 && peek(&cur_bank->queue) == cur_bank->current){
             int num_prints = cur_bank->current * 5;
             char str[256];
@@ -96,6 +96,7 @@ int wait_queue(){
                 print(str);
             }
             release_cs(cur_bank);
+            running_processes--;
             break;
         }
         int id = receive_any(cur_bank, &msg);
@@ -115,10 +116,11 @@ int wait_queue(){
                     },
                     .s_payload = "",
                 };
-                send(cur_bank, id-1, &msg);
+                send(cur_bank, id, &msg);
                 break;
             case CS_REPLY:
                 wait_reply--;
+                printf("Now wait_reply is %d\n", wait_reply);
                 break;
             case CS_RELEASE:
                 pop(&cur_bank->queue);
