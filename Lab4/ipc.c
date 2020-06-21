@@ -1,5 +1,6 @@
 #include "stdio.h"
 #include "io.h"
+#include "pa2345.h"
 #include <unistd.h>
 #include <fcntl.h>
 #include <stdbool.h>
@@ -37,6 +38,7 @@ int send(void* self, local_id dst, const Message* msg){
         //write(output[cur->current][dst], &msg->s_header, sizeof(MessageHeader));
         //write(output[cur->current][dst], &msg->s_payload, msg->s_header.s_payload_len);
         cur->lamp_time++;
+        //print("111111111111111111111111111");
         write(output[cur->current][dst], msg, msg->s_header.s_payload_len + sizeof(MessageHeader));
         return 0;
 }
@@ -45,8 +47,11 @@ int send_multicast(void* self, const Message* msg){
     bank* cur_bank = self;
     for(local_id dst=0;dst<processes_count;dst++){
         if (dst != cur_bank->current) {
-            int trans = send(cur_bank, dst, msg);
-            if (trans > 0) return trans;
+            send(cur_bank, dst, msg);
+            /*if (trans > 0) {
+                return trans;
+            }*/
+           // print("BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB");
         }
     }
     return 0;

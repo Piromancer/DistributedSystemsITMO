@@ -4,16 +4,21 @@
 #include <stdbool.h>
 #include "lamport.h"
 
-int front = 0;
+int lol(){
+    return 1;
+}
+
+
+/*int front = 0;
 int rear = -1;
 int itemCount = 0;
 static node_t queue[MAX_QUEUE];
 
 node_t peek() {
    return queue[front];
-}
+}*/
 
-bool isEmpty() {
+/*bool isEmpty() {
    return itemCount == 0;
 }
 
@@ -194,4 +199,4 @@ int release_cs(const void * self){
     
     send_multicast(NULL, &msg);
     return 0;
-}
+}*/
