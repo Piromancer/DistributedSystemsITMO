@@ -6,10 +6,10 @@
 #include <stdbool.h>
 
 int send(void* self, local_id dst, const Message* msg){
-        bank* cur = self;
-        cur->lamp_time++;
-        write(output[cur->current][dst], msg, msg->s_header.s_payload_len + sizeof(MessageHeader));
-        return 0;
+    bank* cur = self;
+    cur->lamp_time++;
+    write(output[cur->current][dst], msg, msg->s_header.s_payload_len + sizeof(MessageHeader));
+    return 0;
 }
 
 int send_multicast(void* self, const Message* msg){

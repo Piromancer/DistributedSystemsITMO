@@ -31,6 +31,11 @@ int peek(Node** head)
 { 
     return (*head)->data; 
 } 
+
+int peekPrio(Node** head) 
+{ 
+    return (*head)->priority; 
+} 
   
 // Removes the element with the 
 // highest priority form the list 
@@ -41,20 +46,22 @@ void pop(Node** head)
     free(temp); 
 } 
   
+// void print_queue(Node** head)
+// {
+//     printf("Process %d with prio %d | ", (*head)->data, (*head)->priority);
+//     if((*head)->next == NULL) 
+//         printf("\n");
+//         return;
+//     print_queue(&((*head)->next));
+// }
+
 // Function to push according to priority 
 void push(Node** head, int d, int p) 
 { 
     Node* start = (*head); 
   
-    // Create new Node 
     Node* temp = newNode(d, p); 
-  
-    // Special Case: The head of list has lesser 
-    // priority than new node. So insert new 
-    // node before head node and change head node. 
     if ((*head)->priority > p) { 
-  
-        // Insert New Node before head 
         temp->next = *head; 
         (*head) = temp; 
     } 
@@ -65,7 +72,7 @@ void push(Node** head, int d, int p)
         while (start->next != NULL && 
                start->next->priority < p) { 
             start = start->next; 
-        } 
+        }
   
         // Either at the ends of the list 
         // or at required position 
@@ -81,6 +88,7 @@ int isEmpty(Node** head)
 }
 
 
+
 int wait_queue(){
     bank* cur_bank = &target;
     int wait_reply = processes_count - 2;
@@ -88,6 +96,7 @@ int wait_queue(){
     Message msg;
 
     while (running_processes > 0){
+        printf("%d with priority %d is next, current proccess is %d\n", peek(&cur_bank->queue), peekPrio(&cur_bank->queue), cur_bank->current);
         if(wait_reply == 0 && peek(&cur_bank->queue) == cur_bank->current){
             int num_prints = cur_bank->current * 5;
             char str[256];
@@ -96,6 +105,7 @@ int wait_queue(){
                 print(str);
             }
             release_cs(cur_bank);
+            pop(&cur_bank->queue);
             running_processes--;
             break;
         }
@@ -106,6 +116,7 @@ int wait_queue(){
         switch(msg.s_header.s_type){
             case CS_REQUEST:
                 push(&cur_bank->queue, id, msg.s_header.s_local_time);
+                printf("Pushed %d with prio %d in time %d", id, msg.s_header.s_local_time, get_lamport_time());
                 cur_bank->lamp_time++;
                 msg = (Message) {
                     .s_header = {
@@ -148,8 +159,8 @@ int request_cs(const void * self){
         },
         .s_payload = "",
     };
-    send_multicast(cur_bank, &msg);
     cur_bank->queue = newNode(cur_bank->current, get_lamport_time());
+    send_multicast(cur_bank, &msg);
     return 0;
 }
 
@@ -274,6 +285,7 @@ int main( int argc, char* argv[] ){
         if (child_pid != -1) {
             if (child_pid == 0) {
                 cur_bank->current = id;
+                cur_bank->lamp_time = 0;
                 break;
             } else {
                 cur_bank->current = PARENT_ID;
