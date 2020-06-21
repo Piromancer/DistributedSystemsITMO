@@ -103,7 +103,7 @@ int wait_queue(){
     while (running_processes > 0){
         //printf("%d with priority %d is next, current proccess is %d\n", peek(&cur_bank->queue), peekPrio(&cur_bank->queue), cur_bank->current);
         if(wait_reply == 0 && peek(&cur_bank->queue) == cur_bank->current){
-            print_queue(&cur_bank->queue);
+            //print_queue(&cur_bank->queue);
             int num_prints = cur_bank->current * 5;
             char str[256];
             for (int i = 1; i <= num_prints; ++i) {
@@ -113,7 +113,6 @@ int wait_queue(){
             release_cs(cur_bank);
             pop(&cur_bank->queue);
             running_processes--;
-            break;
         }
         int id = receive_any(cur_bank, &msg);
         if(cur_bank->lamp_time < msg.s_header.s_local_time) 
