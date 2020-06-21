@@ -14,16 +14,6 @@
 #include "ipc.h"
 #include "pa2345.h"
 #include "lamport.h"
-
-typedef struct node { 
-    int data; 
-  
-    // Lower values indicate higher priority 
-    int priority; 
-  
-    struct node* next; 
-  
-} Node; 
   
 // Function to Create A New Node 
 Node* newNode(int d, int p) 
@@ -62,7 +52,7 @@ void push(Node** head, int d, int p)
     // Special Case: The head of list has lesser 
     // priority than new node. So insert new 
     // node before head node and change head node. 
-    if ((*head)->priority < p) { 
+    if ((*head)->priority > p) { 
   
         // Insert New Node before head 
         temp->next = *head; 
@@ -73,7 +63,7 @@ void push(Node** head, int d, int p)
         // Traverse the list and find a 
         // position to insert new node 
         while (start->next != NULL && 
-               start->next->priority > p) { 
+               start->next->priority < p) { 
             start = start->next; 
         } 
   
@@ -82,7 +72,7 @@ void push(Node** head, int d, int p)
         temp->next = start->next; 
         start->next = temp; 
     } 
-} 
+}
   
 // Function to check is list is empty 
 int isEmpty(Node** head) 
@@ -92,9 +82,9 @@ int isEmpty(Node** head)
 
 
 int wait_queue(){
-    bank* cur_bank = &target;
-    int wait_reply = processes_count - 1;
-    int running_processes = processes_count - 1;
+    // bank* cur_bank = &target;
+    // int wait_reply = processes_count - 1;
+    // int running_processes = processes_count - 1;
     
     return 0;
 }
@@ -114,12 +104,12 @@ int request_cs(const void * self){
         .s_payload = "",
     };
     send_multicast(cur_bank, &msg);
-    Node* myRequest = newNode(cur_bank->current, get_lamport_time());
-    push(&myRequest, 2, 1);
-    push(&myRequest, 3, 1000);
-    while (!isEmpty(&myRequest)) { 
-        printf("%d ", peek(&myRequest)); 
-        pop(&myRequest); 
+    cur_bank->queue = newNode(cur_bank->current, get_lamport_time());
+    push(&cur_bank->queue, 10, 1);
+    push(&cur_bank->queue, 20, 1000);
+    while (!isEmpty(&cur_bank->queue)) {
+        printf("%d ", peek(&cur_bank->queue)); 
+        pop(&cur_bank->queue); 
     }
     printf("\n");
     return 0;
