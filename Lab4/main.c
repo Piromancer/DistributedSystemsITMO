@@ -83,18 +83,18 @@ int isEmpty(Node** head)
 
 int wait_queue(){
     bank* cur_bank = &target;
-    int wait_reply = processes_count - 1;
+    int wait_reply = processes_count - 2;
     int running_processes = processes_count - 1;
     Message msg;
 
     while (running_processes > 0){
         int id = receive_any(cur_bank, &msg);
+        printf("%d\n", id);
         if(cur_bank->lamp_time < msg.s_header.s_local_time) 
             cur_bank->lamp_time = msg.s_header.s_local_time;
         cur_bank->lamp_time++;
         switch(msg.s_header.s_type){
             case CS_REQUEST:
-            // no check yet
                 push(&cur_bank->queue, id, msg.s_header.s_local_time);
                 cur_bank->lamp_time++;
                 msg = (Message) {
@@ -106,13 +106,15 @@ int wait_queue(){
                     },
                     .s_payload = "",
                 };
-                send(cur_bank, id, &msg);
+                send(cur_bank, id-1, &msg);
                 break;
             case CS_REPLY:
+                puts("CS_REPLY");
                 wait_reply--;
+                printf("Current wait reply is %d\n", wait_reply);
                 if(wait_reply == 0){
                     int num_prints = cur_bank->current * 5;
-                    char str[128];
+                    char str[256];
                     for (int i = 1; i <= num_prints; ++i) {
                         sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
                         fprintf(fp, log_loop_operation_fmt, cur_bank->current, i, num_prints);
@@ -135,6 +137,7 @@ int wait_queue(){
 
 
 int request_cs(const void * self){
+    printf("ENTERED REQUEST CS\n");
     bank* cur_bank = (bank*) self;
 
     cur_bank->lamp_time++;
@@ -167,6 +170,15 @@ int release_cs(const void * self){
             .s_payload_len = 0
     };
     send_multicast(cur, &msg);
+
+    msg.s_header = (MessageHeader) {
+            .s_magic = MESSAGE_MAGIC,
+            .s_type  = DONE,
+            .s_local_time = get_lamport_time(),
+            .s_payload_len = 0
+    };
+    send_multicast(cur, &msg);
+    printf(log_done_fmt, cur->current, cur->current, 0);
     return 0;
 }
 
@@ -285,8 +297,10 @@ int main( int argc, char* argv[] ){
     char str[128];
     
     if(mutexl_flag){
-        request_cs(cur_bank);
-        wait_queue();
+        if(cur_bank->current != PARENT_ID){
+            request_cs(cur_bank);
+            wait_queue();
+        }
     } else
     for (int i = 1; i <= num_prints; ++i) {
         sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
