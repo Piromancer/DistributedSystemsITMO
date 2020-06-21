@@ -105,13 +105,6 @@ int request_cs(const void * self){
     };
     send_multicast(cur_bank, &msg);
     cur_bank->queue = newNode(cur_bank->current, get_lamport_time());
-    push(&cur_bank->queue, 10, 1);
-    push(&cur_bank->queue, 20, 1000);
-    while (!isEmpty(&cur_bank->queue)) {
-        printf("%d ", peek(&cur_bank->queue)); 
-        pop(&cur_bank->queue); 
-    }
-    printf("\n");
     return 0;
 }
 
