@@ -15,158 +15,87 @@
 #include "pa2345.h"
 #include "lamport.h"
 
-int front = 0;
-int rear = -1;
-int itemCount = 0;
-static node_t queue[MAX_QUEUE];
-
-node_t peek() {
-    return queue[front];
+typedef struct node { 
+    int data; 
+  
+    // Lower values indicate higher priority 
+    int priority; 
+  
+    struct node* next; 
+  
+} Node; 
+  
+// Function to Create A New Node 
+Node* newNode(int d, int p) 
+{ 
+    Node* temp = (Node*)malloc(sizeof(Node)); 
+    temp->data = d; 
+    temp->priority = p; 
+    temp->next = NULL; 
+  
+    return temp; 
+} 
+  
+// Return the value at head 
+int peek(Node** head) 
+{ 
+    return (*head)->data; 
+} 
+  
+// Removes the element with the 
+// highest priority form the list 
+void pop(Node** head) 
+{ 
+    Node* temp = *head; 
+    (*head) = (*head)->next; 
+    free(temp); 
+} 
+  
+// Function to push according to priority 
+void push(Node** head, int d, int p) 
+{ 
+    Node* start = (*head); 
+  
+    // Create new Node 
+    Node* temp = newNode(d, p); 
+  
+    // Special Case: The head of list has lesser 
+    // priority than new node. So insert new 
+    // node before head node and change head node. 
+    if ((*head)->priority < p) { 
+  
+        // Insert New Node before head 
+        temp->next = *head; 
+        (*head) = temp; 
+    } 
+    else { 
+  
+        // Traverse the list and find a 
+        // position to insert new node 
+        while (start->next != NULL && 
+               start->next->priority > p) { 
+            start = start->next; 
+        } 
+  
+        // Either at the ends of the list 
+        // or at required position 
+        temp->next = start->next; 
+        start->next = temp; 
+    } 
+} 
+  
+// Function to check is list is empty 
+int isEmpty(Node** head) 
+{ 
+    return (*head) == NULL; 
 }
-
-bool isEmpty() {
-    return itemCount == 0;
-}
-
-bool isFull() {
-    return itemCount == MAX_QUEUE;
-}
-
-int size() {
-    return itemCount;
-}
-
-void insert(node_t data) {
-
-    if(!isFull()) {
-
-        if(rear == MAX_QUEUE-1) {
-            rear = -1;
-        }
-
-        queue[++rear] = data;
-        itemCount++;
-    }
-}
-
-node_t removeData() {
-    node_t data = queue[front++];
-
-    if(front == MAX_QUEUE) {
-        front = 0;
-    }
-
-    itemCount--;
-    return data;
-}
-
-
-void insert_into_queue(){
-    bank* bank1 = &target;
-    node_t *node = (node_t*)malloc(sizeof(node_t));
-    node->next = NULL;
-    node->id = bank1->current;
-    node->time = get_lamport_time();
-    insert(*node);
-}
-
 
 
 int wait_queue(){
     bank* cur_bank = &target;
     int wait_reply = processes_count - 1;
     int running_processes = processes_count - 1;
-    while (running_processes > 0){
-        Message msg;
-        receive_any(NULL, &msg);
-        if (cur_bank->lamp_time < msg.s_header.s_local_time){
-            cur_bank->lamp_time = msg.s_header.s_local_time;
-        }
-        cur_bank->lamp_time++;
-        switch (msg.s_header.s_type){
-            case CS_REQUEST: {
-                break;
-            }
-            case CS_REPLY: {
-                wait_reply--;
-                if (wait_reply == 0){
-                    char str[128];
-                    int num_prints = cur_bank->current * 5;
-
-                    for (int i = 1; i <= num_prints; ++i) {
-                        memset(str, 0, sizeof(str));
-                        if (mutexl_flag){
-                            sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                            request_cs(cur_bank);
-                            print(str);
-                            release_cs(cur_bank);
-                            print("yep");
-
-                        } else {
-                            sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                            print(str);
-                            print("nope");
-                        }
-                    }
-                    Message message;
-
-                    cur_bank->lamp_time++;
-                    message.s_header = (MessageHeader) {
-                            .s_magic = MESSAGE_MAGIC,
-                            .s_type  = CS_RELEASE,
-                            .s_local_time = get_lamport_time(),
-                            .s_payload_len = 0
-                    };
-                    send_multicast(NULL, &message);
-
-                    cur_bank->lamp_time++;
-                    message.s_header = (MessageHeader) {
-                            .s_magic = MESSAGE_MAGIC,
-                            .s_type  = DONE,
-                            .s_local_time = get_lamport_time(),
-                            .s_payload_len = 0
-                    };
-                }
-                break;
-            }
-            case CS_RELEASE: {
-                removeData();
-                break;
-            }
-            case DONE: {
-                running_processes--;
-                break;
-            }
-        }
-    }
-    // while (wait_reply != 0 || (process->queue->len && process->queue->start->id != process->self_id) ) {
-    //     int id;
-    //     while ((id = receive_any((void*)process, &message)) < 0);
-    //     set_lamport_time(message.s_header.s_local_time);
-    //     switch (message.s_header.s_type) {
-    //         case CS_REQUEST: {
-    //             insert_into_queue(process->queue, make_node(id, message.s_header.s_local_time));
-    //             increase_lamport_time();
-    //             message.s_header.s_type = CS_REPLY;
-    //             message.s_header.s_local_time = get_lamport_time();
-    //             send((void*)process, id, &message);
-    //             break;
-    //         }
-    //         case CS_REPLY: {
-    //             wait_reply--;
-    //             break;
-    //         }
-    //         case CS_RELEASE: {
-    //             del_first_of_queue(process->queue);
-    //             break;
-    //         }
-    //         case DONE: {
-    //             process->running_processes--;
-    //             break;
-    //         }
-
-    //     }
-    // }
+    
     return 0;
 }
 
@@ -185,8 +114,14 @@ int request_cs(const void * self){
         .s_payload = "",
     };
     send_multicast(cur_bank, &msg);
-    insert_into_queue();
-    wait_queue();
+    Node* myRequest = newNode(cur_bank->current, get_lamport_time());
+    push(&myRequest, 2, 1);
+    push(&myRequest, 3, 1000);
+    while (!isEmpty(&myRequest)) { 
+        printf("%d ", peek(&myRequest)); 
+        pop(&myRequest); 
+    }
+    printf("\n");
     return 0;
 }
 
@@ -261,7 +196,6 @@ int main( int argc, char* argv[] ){
         switch(opt) {
             case 0:
                 puts("flag mutexl set");
-                printf("%d", mutexl_flag);
                 break;
             case 'p':
                 children_processes_count = strtoul(optarg, NULL, 10);
@@ -314,41 +248,26 @@ int main( int argc, char* argv[] ){
 
     }
     close_unused_pipes();
-
+    
     /*send_msg(current, STARTED, log_started_fmt);
     receive_msg(current, children_processes_count);
     printf(log_received_all_started_fmt, current);
     */
 
     //output loop
-    char str[128];
     int num_prints = cur_bank->current * 5;
-
+    char str[128];
+    
+    if(mutexl_flag){
+        request_cs(cur_bank);
+        /*wait_queue();
+        release_cs();*/
+    } else
     for (int i = 1; i <= num_prints; ++i) {
-        memset(str, 0, sizeof(str));
-        /*if (mutexl_flag){
-            puts("AOAOAOOAOAOAOAOAOAOAOO YES");
-        } else puts ("YAYAYAYAYAYAY NO");*/
-        if (mutexl_flag){
-            sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-            print("BEFORE CS");
-            request_cs(cur_bank);
-            print(str);
-            release_cs(cur_bank);
-            print("YEP");
-        } else {
-            sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-            print(str);
-            //print("NOPE");
-        }
-
+        sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+        fprintf(fp, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+        print(str);
     }
-
-    //pthread_mutex_lock (&fp);
-    //fprintf(fp, log_received_all_started_fmt, cur_bank->current);
-    //pthread_mutex_unlock (&fp);
-    //send_msg(current, DONE, log_done_fmt);
-    //printf(log_received_all_done_fmt, cur_bank->current);
 
     if (cur_bank->current == PARENT_ID) {
         for (int i = 1; i <= processes_count; i++) {
