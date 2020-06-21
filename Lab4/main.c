@@ -87,9 +87,18 @@ int wait_queue(){
     int running_processes = processes_count - 1;
     Message msg;
 
-    while (running_processes > 0){
+    while (true){
+        if(wait_reply == 0 && peek(&cur_bank->queue) == cur_bank->current){
+            int num_prints = cur_bank->current * 5;
+            char str[256];
+            for (int i = 1; i <= num_prints; ++i) {
+                sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+                print(str);
+            }
+            release_cs(cur_bank);
+            break;
+        }
         int id = receive_any(cur_bank, &msg);
-        printf("%d\n", id);
         if(cur_bank->lamp_time < msg.s_header.s_local_time) 
             cur_bank->lamp_time = msg.s_header.s_local_time;
         cur_bank->lamp_time++;
@@ -110,17 +119,6 @@ int wait_queue(){
                 break;
             case CS_REPLY:
                 wait_reply--;
-                printf("Current wait reply is %d\n", wait_reply);
-                if(wait_reply == 0){
-                    int num_prints = cur_bank->current * 5;
-                    char str[256];
-                    for (int i = 1; i <= num_prints; ++i) {
-                        sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                        fprintf(fp, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                        print(str);
-                    }
-                    release_cs(cur_bank);
-                }
                 break;
             case CS_RELEASE:
                 pop(&cur_bank->queue);
