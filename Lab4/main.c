@@ -141,6 +141,8 @@ int wait_queue(){
                 break;
             case DONE:
                 running_processes--;
+                if(running_processes == 0)
+                    printf(log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
                 break;
         }
     }
@@ -174,15 +176,6 @@ int release_cs(const void * self){
     bank* cur = (bank*) self;
     Message msg;
     cur->lamp_time++;
-
-    msg.s_header = (MessageHeader) {
-            .s_magic = MESSAGE_MAGIC,
-            .s_type  = CS_RELEASE,
-            .s_local_time = get_lamport_time(),
-            .s_payload_len = 0
-    };
-    send_multicast(cur, &msg);
-
     msg.s_header = (MessageHeader) {
             .s_magic = MESSAGE_MAGIC,
             .s_type  = DONE,
@@ -191,12 +184,16 @@ int release_cs(const void * self){
     };
     send_multicast(cur, &msg);
     printf(log_done_fmt, cur->current, cur->current, 0);
+
+    msg.s_header = (MessageHeader) {
+            .s_magic = MESSAGE_MAGIC,
+            .s_type  = CS_RELEASE,
+            .s_local_time = get_lamport_time(),
+            .s_payload_len = 0
+    };
+    send_multicast(cur, &msg);
     return 0;
 }
-
-
-
-
 
 
 void close_unused_pipes() {
@@ -245,7 +242,6 @@ int main( int argc, char* argv[] ){
     while(opt != -1) {
         switch(opt) {
             case 0:
-                puts("flag mutexl set");
                 break;
             case 'p':
                 children_processes_count = strtoul(optarg, NULL, 10);
@@ -299,13 +295,33 @@ int main( int argc, char* argv[] ){
 
     }
     close_unused_pipes();
-    
-    // send_msg(current, STARTED, log_started_fmt);
-    // receive_msg(current, children_processes_count);
-    // fprintf(fp, log_received_all_started_fmt, current);
-    // printf(log_received_all_started_fmt, current);
 
-    //output loop
+    if(cur_bank->current != PARENT_ID){
+        cur_bank->lamp_time++;
+        Message msg = {
+                .s_header =
+                        { .s_magic = MESSAGE_MAGIC, .s_type = STARTED, .s_local_time = get_lamport_time(),
+                        } };
+        timestamp_t timestamp = get_lamport_time();
+        snprintf(msg.s_payload, sizeof(msg.s_payload), log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance);
+        msg.s_header.s_payload_len = strlen(msg.s_payload);
+        fprintf(fp, (const char *) &msg, log_started_fmt, timestamp, cur_bank->current, getpid(), getppid(), cur_bank->balanceHistory.s_history[timestamp].s_balance);
+        send_multicast(&target, &msg);
+    }
+
+    for (int i = 1; i < processes_count; i++){
+        Message message;
+        if (i != cur_bank->current){
+            receive(&target, i, &message);
+            if (cur_bank->lamp_time < message.s_header.s_local_time){
+                cur_bank->lamp_time = message.s_header.s_local_time;
+            }
+            cur_bank->lamp_time++;
+        }
+    }
+    printf(log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
+    fprintf(fp, log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
+
     int num_prints = cur_bank->current * 5;
     char str[128];
     
