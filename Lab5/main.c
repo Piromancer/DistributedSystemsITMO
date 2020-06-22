@@ -91,7 +91,7 @@ int isEmpty(Node** head)
     return (*head) == NULL; 
 }
 
-int deferred[MAX_PROCESS_ID];
+int deferred[MAX_N];
 
 int wait_queue(){
     bank* cur_bank = &target;
@@ -106,7 +106,8 @@ int wait_queue(){
             cur_bank->lamp_time = msg.s_header.s_local_time;
         cur_bank->lamp_time++;
         //if(wait_reply == 0 && deferred[id] == 0){
-        if(wait_reply == 0){
+
+        /*todo if(wait_reply == 0){
             //deferred[id] = 0;
             //print_queue(&cur_bank->queue);
             int num_prints = cur_bank->current * 5;
@@ -118,7 +119,7 @@ int wait_queue(){
             release_cs(cur_bank);
             //pop(&cur_bank->queue);
             running_processes--;
-        }
+        }*/
       //  deferred[id] = 1;
         //if(cur_bank->lamp_time < msg.s_header.s_local_time)
         //    cur_bank->lamp_time = msg.s_header.s_local_time;
@@ -165,7 +166,8 @@ int request_cs(const void * self){
 
     bank* cur_bank = (bank*) self;
 
-    cur_bank->lamp_time++;
+    timestamp_t reqTime = ++cur_bank->lamp_time;
+    //cur_bank->lamp_time++;
     Message msg = {
         .s_header = {
             .s_magic = MESSAGE_MAGIC,
@@ -180,6 +182,73 @@ int request_cs(const void * self){
     //cur_bank->queue = newNode(cur_bank->current, get_lamport_time());
     //deferred[id] = 0;
     send_multicast(cur_bank, &msg);
+
+    int wait_reply = processes_count - 2;
+    int running_processes = processes_count - 1;
+
+
+    while (wait_reply > 0){
+        Message msg1;
+        //printf("%d with priority %d is next, current proccess is %d\n", peek(&cur_bank->queue), peekPrio(&cur_bank->queue), cur_bank->current);
+        int id = receive_any(cur_bank, &msg1);
+        if(cur_bank->lamp_time < msg1.s_header.s_local_time)
+            cur_bank->lamp_time = msg1.s_header.s_local_time;
+        cur_bank->lamp_time++;
+        //if(wait_reply == 0 && deferred[id] == 0){
+
+        /*if(wait_reply == 0){
+            //deferred[id] = 0;
+            //print_queue(&cur_bank->queue);
+            int num_prints = cur_bank->current * 5;
+            char str[256];
+            for (int i = 1; i <= num_prints; ++i) {
+                sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+                print(str);
+            }
+            release_cs(cur_bank);
+            //pop(&cur_bank->queue);
+            running_processes--;
+        }*/
+        //  deferred[id] = 1;
+        //if(cur_bank->lamp_time < msg.s_header.s_local_time)
+        //    cur_bank->lamp_time = msg.s_header.s_local_time;
+        switch(msg1.s_header.s_type){
+            case CS_REQUEST:
+                //puts("req");
+                //ush(&cur_bank->queue, id, msg.s_header.s_local_time);
+                if (msg1.s_header.s_local_time < reqTime || (msg1.s_header.s_local_time == reqTime && cur_bank->current < id)) {
+                    deferred[id] = 0;
+                    cur_bank->lamp_time++;
+                    msg1 = (Message) {
+                            .s_header = {
+                                    .s_magic = MESSAGE_MAGIC,
+                                    .s_type  = CS_REPLY,
+                                    .s_local_time = get_lamport_time(),
+                                    .s_payload_len = 0
+                            },
+                            .s_payload = "",
+                    };
+                    //puts("here");
+                    send(cur_bank, id, &msg1);
+                }else {
+                    deferred[id] = 1;
+                }
+                break;
+            case CS_REPLY:
+                //puts("rep");
+                wait_reply--;
+                break;
+                /*case CS_RELEASE:
+                    pop(&cur_bank->queue);
+                    break;*/
+            case DONE:
+                //puts("done");
+                running_processes--;
+                if(running_processes == 0)
+                    printf(log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
+                break;
+        }
+    }
     return 0;
 }
 
@@ -187,10 +256,6 @@ int request_cs(const void * self){
 
 
 int release_cs(const void * self){
-
-
-
-
     bank* cur = (bank*) self;
     Message msg;
 
@@ -219,7 +284,6 @@ int release_cs(const void * self){
     send_multicast(cur, &msg);
 
     printf(log_done_fmt, cur->current, cur->current, 0);
-
 
 
     /*msg.s_header = (MessageHeader) {
@@ -364,8 +428,16 @@ int main( int argc, char* argv[] ){
     
     if(mutexl_flag){
         if(cur_bank->current != PARENT_ID){
+            //puts("1");
             request_cs(cur_bank);
-            wait_queue();
+            //wait_queue();
+            for (int i = 1; i <= num_prints; ++i) {
+                sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+                fprintf(fp, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+                print(str);
+            }
+            //puts("3");
+            release_cs(cur_bank);
         }
     } else
     for (int i = 1; i <= num_prints; ++i) {
