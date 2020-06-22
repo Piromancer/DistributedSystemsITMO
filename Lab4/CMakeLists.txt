@@ -9,8 +9,6 @@ add_executable(peer4
         io.h
         ipc.c
         ipc.h
-        lamport.c
-        lamport.h
         main.c
         pa1.h
         pa2345.h)

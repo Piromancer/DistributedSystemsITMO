@@ -13,7 +13,6 @@
 #include "io.h"
 #include "ipc.h"
 #include "pa2345.h"
-#include "lamport.h"
   
 // Function to Create A New Node 
 Node* newNode(int d, int p) 
