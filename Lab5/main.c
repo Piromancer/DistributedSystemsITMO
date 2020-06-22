@@ -13,161 +13,14 @@
 #include "io.h"
 #include "ipc.h"
 #include "pa2345.h"
-  
-// Function to Create A New Node 
-Node* newNode(int d, int p) 
-{ 
-    Node* temp = (Node*)malloc(sizeof(Node)); 
-    temp->data = d; 
-    temp->priority = p; 
-    temp->next = NULL; 
-  
-    return temp; 
-} 
-  
-// Return the value at head 
-int peek(Node** head) 
-{ 
-    return (*head)->data; 
-} 
-
-int peekPrio(Node** head) 
-{ 
-    return (*head)->priority; 
-} 
-  
-// Removes the element with the 
-// highest priority form the list 
-void pop(Node** head) 
-{ 
-    Node* temp = *head; 
-    (*head) = (*head)->next; 
-    free(temp); 
-} 
-  
-void print_queue(Node** head)
-{
-    char res[4096] = "------------------------------------------\n";
-    Node* nd = *head;
-    while(nd != NULL){
-        char tmp[256];
-        sprintf(tmp, "Process %d with prio %d\n", nd->data, nd->priority);
-        strcat(res, tmp);
-        nd = nd->next;
-    }
-    strcat(res, "------------------------------------------\n");
-    printf("%s", res);
-}
-
-// Function to push according to priority 
-void push(Node** head, int d, int p) 
-{ 
-    Node* start = (*head); 
-  
-    Node* temp = newNode(d, p); 
-    if ((*head)->data > d) { 
-        temp->next = *head; 
-        (*head) = temp; 
-    } 
-    else { 
-  
-        // Traverse the list and find a 
-        // position to insert new node 
-        while (start->next != NULL && 
-               start->next->data < d) { 
-            start = start->next; 
-        }
-  
-        // Either at the ends of the list 
-        // or at required position 
-        temp->next = start->next; 
-        start->next = temp; 
-    } 
-}
-  
-// Function to check is list is empty 
-int isEmpty(Node** head) 
-{ 
-    return (*head) == NULL; 
-}
 
 int deferred[MAX_N];
-
-int wait_queue(){
-    bank* cur_bank = &target;
-    int wait_reply = processes_count - 2;
-    int running_processes = processes_count - 1;
-    Message msg;
-
-    while (running_processes > 0){
-        //printf("%d with priority %d is next, current proccess is %d\n", peek(&cur_bank->queue), peekPrio(&cur_bank->queue), cur_bank->current);
-        int id = receive_any(cur_bank, &msg);
-        if(cur_bank->lamp_time < msg.s_header.s_local_time)
-            cur_bank->lamp_time = msg.s_header.s_local_time;
-        cur_bank->lamp_time++;
-        //if(wait_reply == 0 && deferred[id] == 0){
-
-        /*todo if(wait_reply == 0){
-            //deferred[id] = 0;
-            //print_queue(&cur_bank->queue);
-            int num_prints = cur_bank->current * 5;
-            char str[256];
-            for (int i = 1; i <= num_prints; ++i) {
-                sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                print(str);
-            }
-            release_cs(cur_bank);
-            //pop(&cur_bank->queue);
-            running_processes--;
-        }*/
-      //  deferred[id] = 1;
-        //if(cur_bank->lamp_time < msg.s_header.s_local_time)
-        //    cur_bank->lamp_time = msg.s_header.s_local_time;
-
-        switch(msg.s_header.s_type){
-            case CS_REQUEST:
-                //ush(&cur_bank->queue, id, msg.s_header.s_local_time);
-                if (msg.s_header.s_local_time < get_lamport_time() || (msg.s_header.s_local_time == get_lamport_time() && cur_bank->current < id)) {
-                    deferred[id] = 0;
-                    cur_bank->lamp_time++;
-                    msg = (Message) {
-                            .s_header = {
-                                    .s_magic = MESSAGE_MAGIC,
-                                    .s_type  = CS_REPLY,
-                                    .s_local_time = get_lamport_time(),
-                                    .s_payload_len = 0
-                            },
-                            .s_payload = "",
-                    };
-                    send(cur_bank, id, &msg);
-                }else {
-                    deferred[id] = 1;
-                }
-                break;
-            case CS_REPLY:
-                wait_reply--;
-                break;
-            /*case CS_RELEASE:
-                pop(&cur_bank->queue);
-                break;*/
-            case DONE:
-                running_processes--;
-                if(running_processes == 0)
-                    printf(log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
-                break;
-        }
-    }
-    
-    return 0;
-}
-
 
 int request_cs(const void * self){
 
     bank* cur_bank = (bank*) self;
 
     timestamp_t reqTime = ++cur_bank->lamp_time;
-    //cur_bank->lamp_time++;
     Message msg = {
         .s_header = {
             .s_magic = MESSAGE_MAGIC,
@@ -178,45 +31,38 @@ int request_cs(const void * self){
         .s_payload = "",
     };
 
-    //int id = receive_any(cur_bank, &msg);
-    //cur_bank->queue = newNode(cur_bank->current, get_lamport_time());
-    //deferred[id] = 0;
     send_multicast(cur_bank, &msg);
 
     int wait_reply = processes_count - 2;
     int running_processes = processes_count - 1;
 
 
-    while (wait_reply > 0){
+    while (running_processes > 0){
         Message msg1;
-        //printf("%d with priority %d is next, current proccess is %d\n", peek(&cur_bank->queue), peekPrio(&cur_bank->queue), cur_bank->current);
+        if(wait_reply == 0){
+            int num_prints = cur_bank->current * 5;
+            char str[128];
+            for (int i = 1; i <= num_prints; ++i) {
+                sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+                fprintf(fp, log_loop_operation_fmt, cur_bank->current, i, num_prints);
+                print(str);
+            }
+            running_processes--;
+            wait_reply--;
+            release_cs(cur_bank);
+        }
         int id = receive_any(cur_bank, &msg1);
         if(cur_bank->lamp_time < msg1.s_header.s_local_time)
             cur_bank->lamp_time = msg1.s_header.s_local_time;
-        cur_bank->lamp_time++;
-        //if(wait_reply == 0 && deferred[id] == 0){
-
-        /*if(wait_reply == 0){
-            //deferred[id] = 0;
-            //print_queue(&cur_bank->queue);
-            int num_prints = cur_bank->current * 5;
-            char str[256];
-            for (int i = 1; i <= num_prints; ++i) {
-                sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                print(str);
-            }
-            release_cs(cur_bank);
-            //pop(&cur_bank->queue);
-            running_processes--;
-        }*/
-        //  deferred[id] = 1;
-        //if(cur_bank->lamp_time < msg.s_header.s_local_time)
-        //    cur_bank->lamp_time = msg.s_header.s_local_time;
-        switch(msg1.s_header.s_type){
+        cur_bank->lamp_time++;switch(msg1.s_header.s_type){
+            case CS_REPLY:
+                wait_reply--;
+                break;
             case CS_REQUEST:
-                //puts("req");
-                //ush(&cur_bank->queue, id, msg.s_header.s_local_time);
-                if (msg1.s_header.s_local_time < reqTime || (msg1.s_header.s_local_time == reqTime && cur_bank->current < id)) {
+                //printf("Received from process %d with time %d, while %d time is %d. So condition is %d\n", 
+                //id, msg1.s_header.s_local_time, cur_bank->current, reqTime, msg1.s_header.s_local_time < reqTime ||
+                // (msg1.s_header.s_local_time == reqTime && cur_bank->current > id));
+                if (msg1.s_header.s_local_time < reqTime || (msg1.s_header.s_local_time == reqTime && cur_bank->current > id)) {
                     deferred[id] = 0;
                     cur_bank->lamp_time++;
                     msg1 = (Message) {
@@ -228,21 +74,12 @@ int request_cs(const void * self){
                             },
                             .s_payload = "",
                     };
-                    //puts("here");
                     send(cur_bank, id, &msg1);
-                }else {
+                } else {
                     deferred[id] = 1;
                 }
                 break;
-            case CS_REPLY:
-                //puts("rep");
-                wait_reply--;
-                break;
-                /*case CS_RELEASE:
-                    pop(&cur_bank->queue);
-                    break;*/
             case DONE:
-                //puts("done");
                 running_processes--;
                 if(running_processes == 0)
                     printf(log_received_all_done_fmt, get_lamport_time(), cur_bank->current);
@@ -281,18 +118,9 @@ int release_cs(const void * self){
             .s_local_time = get_lamport_time(),
             .s_payload_len = 0
     };
+            if(cur->current==3) printf("Process 3 WAS THERE!!!!!!!\n");
     send_multicast(cur, &msg);
-
     printf(log_done_fmt, cur->current, cur->current, 0);
-
-
-    /*msg.s_header = (MessageHeader) {
-            .s_magic = MESSAGE_MAGIC,
-            .s_type  = CS_RELEASE,
-            .s_local_time = get_lamport_time(),
-            .s_payload_len = 0
-    };
-    send_multicast(cur, &msg);*/
     return 0;
 }
 
@@ -422,22 +250,12 @@ int main( int argc, char* argv[] ){
     }
     printf(log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
     fprintf(fp, log_received_all_started_fmt, get_lamport_time(), cur_bank->current);
-
+    
     int num_prints = cur_bank->current * 5;
     char str[128];
-    
     if(mutexl_flag){
         if(cur_bank->current != PARENT_ID){
-            //puts("1");
             request_cs(cur_bank);
-            //wait_queue();
-            for (int i = 1; i <= num_prints; ++i) {
-                sprintf(str, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                fprintf(fp, log_loop_operation_fmt, cur_bank->current, i, num_prints);
-                print(str);
-            }
-            //puts("3");
-            release_cs(cur_bank);
         }
     } else
     for (int i = 1; i <= num_prints; ++i) {
